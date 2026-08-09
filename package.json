@@ -1,0 +1,19 @@
+{
+  "name": "crewly",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Construction Company Management App — offline-first, role-based",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "backend:dev": "npm run dev --workspace=apps/backend",
+    "mobile:start": "npm run start --workspace=apps/mobile",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts,.tsx"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
