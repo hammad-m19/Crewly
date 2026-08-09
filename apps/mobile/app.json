@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Crewly",
+    "slug": "crewly",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "crewly",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "com.crewly.app",
+      "icon": "./assets/expo.icon"
+    },
+    "android": {
+      "package": "com.crewly.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#1E3F7E",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "googleServicesFile": "./google-services.json"
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#1E3F7E"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Crewly needs access to your photos to attach receipt images and work progress photos.",
+          "cameraPermission": "Crewly needs access to your camera to capture receipt photos and document work progress."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1E3F7E",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
