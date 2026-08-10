@@ -1,13 +1,24 @@
+import { Platform } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 
 /**
  * API base URL — update this in production.
- * During development, use your local machine's IP (not localhost)
- * because the app runs on a device/emulator.
+ * iOS Simulator and Android emulator can reach the host machine directly.
+ * On a physical device, replace localhost with your computer's LAN IP.
  */
+function getDevApiBaseUrl(): string {
+  if (Platform.OS === 'ios') {
+    return 'http://localhost:3000/api';
+  }
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3000/api';
+  }
+  return 'http://localhost:3000/api';
+}
+
 const API_BASE_URL = __DEV__
-  ? 'http://192.168.1.100:3000/api' // Change to your dev machine's IP
-  : 'https://api.crewly.app/api';   // Production URL
+  ? getDevApiBaseUrl()
+  : 'https://api.crewly.app/api';
 
 interface FetchOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';

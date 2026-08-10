@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
-import DatabaseProvider from '@nozbe/watermelondb/DatabaseProvider';
+import { DatabaseProvider } from '@nozbe/watermelondb/DatabaseProvider';
 import database from '../db';
 import { setupAutoSync, performSync } from '../lib/sync';
 
@@ -62,13 +62,11 @@ export default function RootLayout() {
     );
   }
 
-  const DBProvider = DatabaseProvider as any;
-
   return (
-    <DBProvider database={database}>
+    <DatabaseProvider database={database}>
       <Slot />
       <StatusBar style="dark" />
-    </DBProvider>
+    </DatabaseProvider>
   );
 }
 
