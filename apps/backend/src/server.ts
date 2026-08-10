@@ -3,8 +3,16 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 import connectDB from './config/db';
 import authRoutes from './routes/auth';
+import dailyReportRoutes from './routes/dailyReports';
+import projectRoutes from './routes/projects';
+import teamRoutes from './routes/teams';
+import materialOrderRoutes from './routes/materialOrders';
+import materialPurchaseRoutes from './routes/materialPurchases';
+import pettyCashRoutes from './routes/pettyCash';
+import syncRoutes from './routes/sync';
 import { moneyFilter } from './middleware/moneyFilter';
 import { authenticate } from './middleware/auth';
 
@@ -16,50 +24,44 @@ const PORT = process.env.PORT || 3000;
 // ----------------------------------------------------------
 app.use(helmet());
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Larger limit for photo base64 payloads
+app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+// Static file serving for uploaded photos
+const uploadDir = process.env.UPLOAD_DIR || './uploads';
+app.use('/uploads', express.static(path.resolve(uploadDir)));
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, error: { message: 'Too many requests, please try again later.' } },
 });
 app.use('/api/', limiter);
 
-// Money filter — applied globally on all authenticated responses.
-// This intercepts res.json() to strip financial fields per-record
-// for non-Owner/non-Accountant users. Applied BEFORE routes so it
-// wraps ALL responses including sync pull data.
-app.use('/api/', authenticate, moneyFilter);
-
 // ----------------------------------------------------------
-// Routes
+// Routes — ORDER MATTERS
 // ----------------------------------------------------------
 
-// Auth routes (login/refresh are public, handled inside the router)
-// We mount auth WITHOUT the global authenticate middleware
-app.use('/api/auth', authRoutes);
-
-// Health check
+// Health check (public)
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Placeholder for future route mounting
-// app.use('/api/projects', authenticate, moneyFilter, projectRoutes);
-// app.use('/api/teams', authenticate, moneyFilter, teamRoutes);
-// app.use('/api/daily-reports', authenticate, moneyFilter, dailyReportRoutes);
-// app.use('/api/material-orders', authenticate, moneyFilter, materialOrderRoutes);
-// app.use('/api/material-purchases', authenticate, moneyFilter, materialPurchaseRoutes);
-// app.use('/api/petty-cash', authenticate, moneyFilter, pettyCashRoutes);
-// app.use('/api/payments', authenticate, moneyFilter, paymentRoutes);
-// app.use('/api/verification', authenticate, moneyFilter, verificationRoutes);
-// app.use('/api/coordination', authenticate, moneyFilter, coordinationRoutes);
-// app.use('/api/notifications', authenticate, notificationRoutes);
-// app.use('/api/sync', authenticate, moneyFilter, syncRoutes);
+// Auth routes — MUST be before global authenticate middleware
+// (login and refresh are public endpoints)
+app.use('/api/auth', authRoutes);
+
+// All routes below require authentication + money filter
+app.use('/api/projects', authenticate, moneyFilter, projectRoutes);
+app.use('/api/teams', authenticate, teamRoutes);
+app.use('/api/daily-reports', authenticate, moneyFilter, dailyReportRoutes);
+app.use('/api/material-orders', authenticate, materialOrderRoutes);
+app.use('/api/material-purchases', authenticate, moneyFilter, materialPurchaseRoutes);
+app.use('/api/petty-cash', authenticate, moneyFilter, pettyCashRoutes);
+app.use('/api/sync', authenticate, moneyFilter, syncRoutes);
 
 // 404 handler
 app.use((_req, res) => {
