@@ -6,12 +6,14 @@ import { useAuthStore } from '../store/authStore';
 import { colors } from '../theme/colors';
 import DatabaseProvider from '@nozbe/watermelondb/DatabaseProvider';
 import database from '../db';
+import { setupAutoSync, performSync } from '../lib/sync';
 
 /**
  * Root layout — handles:
  * 1. WatermelonDB provider (wraps entire app)
  * 2. Auth state initialization from SecureStore
  * 3. Auth-based navigation guard (redirect to login or dashboard)
+ * 4. Auto-sync on connectivity change
  */
 export default function RootLayout() {
   const { user, isInitialized, initialize } = useAuthStore();
@@ -23,6 +25,19 @@ export default function RootLayout() {
     initialize();
   }, []);
 
+  // Setup auto-sync once auth is ready
+  useEffect(() => {
+    if (!isInitialized || !user) return;
+
+    // Start listening for connectivity changes
+    const unsubscribe = setupAutoSync();
+
+    // Initial sync after login
+    performSync();
+
+    return unsubscribe;
+  }, [isInitialized, user]);
+
   // Navigation guard — redirect based on auth state
   useEffect(() => {
     if (!isInitialized) return;
@@ -30,10 +45,8 @@ export default function RootLayout() {
     const inAuthGroup = segments[0] === '(auth)';
 
     if (!user && !inAuthGroup) {
-      // Not logged in, redirect to login
       router.replace('/(auth)/login');
     } else if (user && inAuthGroup) {
-      // Logged in, redirect to role-based dashboard
       const roleRoute = getRoleRoute(user.role);
       router.replace(roleRoute as any);
     }
@@ -49,11 +62,13 @@ export default function RootLayout() {
     );
   }
 
+  const DBProvider = DatabaseProvider as any;
+
   return (
-    <DatabaseProvider database={database}>
+    <DBProvider database={database}>
       <Slot />
       <StatusBar style="dark" />
-    </DatabaseProvider>
+    </DBProvider>
   );
 }
 
