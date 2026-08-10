@@ -48,7 +48,7 @@ export default function OwnerLayout() {
   );
 }
 
-function TabIcon({ emoji, color }: { emoji: string; color: string }) {
+function TabIcon({ emoji, color }: { emoji: string; color: any }) {
   return (
     <View style={tabStyles.iconContainer}>
       <Text style={[tabStyles.icon, { opacity: color === colors.neutral[400] ? 0.5 : 1 }]}>
