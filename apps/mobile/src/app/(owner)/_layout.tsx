@@ -62,3 +62,4 @@ const tabStyles = StyleSheet.create({
   iconContainer: { alignItems: 'center', justifyContent: 'center' },
   icon: { fontSize: 22 },
 });
+
