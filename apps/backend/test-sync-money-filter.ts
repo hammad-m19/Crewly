@@ -39,7 +39,7 @@ async function runTest() {
     body: JSON.stringify({ email: 'site@crewly.com', password: 'crewly2024' })
   });
   
-  const loginData = await res.json();
+  const loginData = (await res.json()) as any;
   const token = loginData.data.token;
   console.log('✅ Got token for Site Supervisor');
   
@@ -50,7 +50,7 @@ async function runTest() {
     }
   });
   
-  const syncData = await syncRes.json();
+  const syncData = (await syncRes.json()) as any;
   
   // 4. Inspect the projects returned
   const projects = syncData.changes?.projects?.created || [];
