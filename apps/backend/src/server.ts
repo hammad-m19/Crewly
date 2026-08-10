@@ -13,6 +13,9 @@ import materialOrderRoutes from './routes/materialOrders';
 import materialPurchaseRoutes from './routes/materialPurchases';
 import pettyCashRoutes from './routes/pettyCash';
 import syncRoutes from './routes/sync';
+import verificationRoutes from './routes/verification';
+import coordinationRoutes from './routes/coordination';
+import notificationRoutes from './routes/notifications';
 import { moneyFilter } from './middleware/moneyFilter';
 import { authenticate } from './middleware/auth';
 
@@ -62,6 +65,9 @@ app.use('/api/material-orders', authenticate, materialOrderRoutes);
 app.use('/api/material-purchases', authenticate, moneyFilter, materialPurchaseRoutes);
 app.use('/api/petty-cash', authenticate, moneyFilter, pettyCashRoutes);
 app.use('/api/sync', authenticate, moneyFilter, syncRoutes);
+app.use('/api/verifications', authenticate, verificationRoutes);
+app.use('/api/coordination', authenticate, coordinationRoutes);
+app.use('/api/notifications', authenticate, notificationRoutes);
 
 // 404 handler
 app.use((_req, res) => {
