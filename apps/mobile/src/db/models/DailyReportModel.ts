@@ -9,7 +9,7 @@ export default class DailyReportModel extends Model {
   @field('date') date!: string; // YYYY-MM-DD
   @field('submitted_by') submittedBy!: string;
   @field('team_entries') teamEntriesRaw!: string; // JSON array
-  @field('sync_status') syncStatus!: string;
+  @field('sync_status') reportSyncStatus!: string;
   @readonly @date('created_at') createdAt!: Date;
   @date('updated_at') updatedAt!: Date;
 
