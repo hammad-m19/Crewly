@@ -1,114 +1,131 @@
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useSyncStore } from '../../store/syncStore';
-import { useAuthStore } from '../../store/authStore';
+import Button from '../../components/ui/Button';
+import { performSync } from '../../lib/sync';
+import StatusChip from '../../components/ui/StatusChip';
 
 export default function SyncStatusScreen() {
-  const { pendingChangesCount, lastSyncAt, isSyncing, isOnline, lastError } = useSyncStore();
-  const logout = useAuthStore((s) => s.logout);
+  const { isOnline, isSyncing, lastSyncAt, pendingChangesCount, lastError } = useSyncStore();
 
   const handleManualSync = () => {
-    if (!isOnline) {
-      Alert.alert('Offline', 'Cannot sync while offline. Changes will sync automatically when you reconnect.');
-      return;
-    }
-    Alert.alert('Sync', 'Manual sync will be available when the sync engine is implemented in Phase 4.');
+    performSync();
   };
 
   return (
-    <View style={styles.container}>
-      {/* Connection Status */}
-      <View style={[styles.statusCard, isOnline ? styles.onlineCard : styles.offlineCard]}>
-        <Text style={styles.statusEmoji}>{isOnline ? '🟢' : '🔴'}</Text>
-        <Text style={styles.statusTitle}>{isOnline ? 'Connected' : 'Offline'}</Text>
-        <Text style={styles.statusSubtitle}>
-          {isOnline ? 'Data syncing normally' : 'Changes saved locally, will sync when connected'}
+    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <View style={styles.header}>
+        <View style={styles.statusIndicator}>
+          <View style={[styles.statusDot, { backgroundColor: isOnline ? colors.success.main : colors.danger.main }]} />
+          <Text style={styles.statusText}>{isOnline ? 'Online' : 'Offline'}</Text>
+        </View>
+        <Text style={styles.lastSync}>
+          Last sync: {lastSyncAt ? new Date(lastSyncAt).toLocaleTimeString() : 'Never'}
         </Text>
       </View>
 
-      {/* Sync Details */}
-      <View style={styles.detailsCard}>
-        <DetailRow label="Pending Changes" value={String(pendingChangesCount)} />
-        <DetailRow
-          label="Last Sync"
-          value={lastSyncAt ? new Date(lastSyncAt).toLocaleString() : 'Never'}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>Local Changes</Text>
+          <StatusChip 
+            status={pendingChangesCount > 0 ? 'pending' : 'synced'} 
+            label={pendingChangesCount > 0 ? `${pendingChangesCount} Pending` : 'Up to date'} 
+          />
+        </View>
+        
+        <Text style={styles.cardDesc}>
+          {pendingChangesCount > 0 
+            ? 'You have changes saved locally that need to be synced with the server.' 
+            : 'All your changes are securely backed up on the server.'}
+        </Text>
+
+        {lastError && (
+          <View style={styles.errorBox}>
+            <Text style={styles.errorTitle}>Last sync failed</Text>
+            <Text style={styles.errorText}>{lastError}</Text>
+          </View>
+        )}
+
+        <Button
+          title={isSyncing ? 'Syncing...' : 'Sync Now'}
+          onPress={handleManualSync}
+          loading={isSyncing}
+          disabled={isSyncing || !isOnline}
+          icon="🔄"
+          style={styles.syncButton}
         />
-        <DetailRow label="Sync Status" value={isSyncing ? 'Syncing...' : 'Idle'} />
-        {lastError && <DetailRow label="Last Error" value={lastError} isError />}
       </View>
 
-      {/* Manual Sync Button */}
-      <TouchableOpacity
-        style={[styles.syncButton, !isOnline && styles.syncButtonDisabled]}
-        onPress={handleManualSync}
-        disabled={isSyncing}
-      >
-        <Text style={styles.syncButtonText}>
-          {isSyncing ? 'Syncing...' : '🔄 Sync Now'}
-        </Text>
-      </TouchableOpacity>
-
-      {/* Logout */}
-      <TouchableOpacity
-        style={styles.logoutButton}
-        onPress={() => {
-          Alert.alert('Sign Out', 'Are you sure?', [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
-          ]);
-        }}
-      >
-        <Text style={styles.logoutText}>Sign Out</Text>
-      </TouchableOpacity>
-    </View>
-  );
-}
-
-function DetailRow({ label, value, isError }: { label: string; value: string; isError?: boolean }) {
-  return (
-    <View style={detailStyles.row}>
-      <Text style={detailStyles.label}>{label}</Text>
-      <Text style={[detailStyles.value, isError && detailStyles.errorValue]}>{value}</Text>
-    </View>
+      {!isOnline && (
+        <View style={styles.infoBox}>
+          <Text style={styles.infoEmoji}>💡</Text>
+          <Text style={styles.infoText}>
+            You can continue working normally while offline. Your changes will be saved to this device and automatically synced when you regain internet connection.
+          </Text>
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background.primary, padding: spacing.lg },
-  statusCard: {
-    borderRadius: borderRadius.lg, padding: spacing['2xl'], alignItems: 'center',
-    marginBottom: spacing['2xl'], ...shadows.sm,
+  container: { flex: 1, backgroundColor: colors.background.primary },
+  content: { padding: spacing.lg },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing['2xl'],
   },
-  onlineCard: { backgroundColor: colors.success.light },
-  offlineCard: { backgroundColor: colors.danger.light },
-  statusEmoji: { fontSize: 40, marginBottom: spacing.sm },
-  statusTitle: { ...typography.heading3, color: colors.text.primary },
-  statusSubtitle: { ...typography.bodySmall, color: colors.text.secondary, marginTop: spacing.xs, textAlign: 'center' },
-  detailsCard: {
-    backgroundColor: colors.background.card, borderRadius: borderRadius.lg,
-    padding: spacing.lg, marginBottom: spacing['2xl'], ...shadows.sm,
+  statusIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.neutral[100],
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
   },
-  syncButton: {
-    backgroundColor: colors.primary[600], paddingVertical: spacing.lg,
-    borderRadius: borderRadius.md, alignItems: 'center', marginBottom: spacing.lg,
+  statusDot: { width: 8, height: 8, borderRadius: 4, marginRight: spacing.sm },
+  statusText: { ...typography.label, color: colors.text.primary },
+  lastSync: { ...typography.caption, color: colors.text.tertiary },
+  
+  card: {
+    backgroundColor: colors.background.card,
+    padding: spacing.xl,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.xl,
+    ...shadows.sm,
   },
-  syncButtonDisabled: { opacity: 0.5 },
-  syncButtonText: { ...typography.button, color: colors.text.inverse },
-  logoutButton: {
-    backgroundColor: colors.danger.light, paddingVertical: spacing.lg,
-    borderRadius: borderRadius.md, alignItems: 'center',
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
-  logoutText: { ...typography.button, color: colors.danger.dark },
-});
+  cardTitle: { ...typography.heading3, color: colors.text.primary },
+  cardDesc: { ...typography.body, color: colors.text.secondary, marginBottom: spacing.xl },
+  syncButton: { marginTop: spacing.md },
+  
+  errorBox: {
+    backgroundColor: colors.danger.light,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.danger.main,
+  },
+  errorTitle: { ...typography.label, color: colors.danger.dark, marginBottom: spacing.xs },
+  errorText: { ...typography.caption, color: colors.danger.dark },
 
-const detailStyles = StyleSheet.create({
-  row: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.neutral[100],
+  infoBox: {
+    flexDirection: 'row',
+    backgroundColor: colors.info.light,
+    padding: spacing.lg,
+    borderRadius: borderRadius.md,
   },
-  label: { ...typography.body, color: colors.text.secondary },
-  value: { ...typography.body, color: colors.text.primary, fontWeight: '600' },
-  errorValue: { color: colors.danger.main },
+  infoEmoji: { fontSize: 24, marginRight: spacing.md },
+  infoText: { flex: 1, ...typography.bodySmall, color: colors.info.dark },
 });
