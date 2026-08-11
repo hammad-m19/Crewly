@@ -66,6 +66,8 @@ Crewly/
 │   │       │   ├── materialOrders.ts, materialPurchases.ts
 │   │       │   ├── pettyCash.ts, verification.ts
 │   │       │   ├── coordination.ts, notifications.ts
+│   │       │   ├── owner.ts        # Dashboard aggregation + cost breakdown (Owner only)
+│   │       │   ├── users.ts        # User management + notification preferences
 │   │       │   └── (each route is mounted in server.ts under /api/*)
 │   │       └── scripts/
 │   │           └── seed.ts         # Creates initial users + sample teams
@@ -81,7 +83,7 @@ Crewly/
 │           │   ├── (auth)/         # Login screen
 │           │   ├── (site)/         # Site Supervisor screens (6 screens)
 │           │   ├── (super)/        # Super Supervisor screens (4 screens)
-│           │   ├── (owner)/        # Owner screens (3 screens — PLACEHOLDER)
+│           │   ├── (owner)/        # Owner screens (3 tabs + 3 hidden detail routes)
 │           │   └── (accountant)/   # Accountant screens (4 screens — PLACEHOLDER)
 │           ├── db/
 │           │   ├── index.ts        # WatermelonDB Database instance
@@ -230,7 +232,7 @@ Copy `apps/backend/.env.example` → `apps/backend/.env`. Key vars:
 
 ## What's Done vs. What's Next
 
-### ✅ Completed (Phases 1–5)
+### ✅ Completed (Phases 1–6)
 
 | Phase | What |
 |-------|------|
@@ -239,18 +241,16 @@ Copy `apps/backend/.env.example` → `apps/backend/.env`. Key vars:
 | 3 | Material orders pipeline, material purchases with receipts, petty cash management |
 | 4 | WatermelonDB sync engine (pull/push with role filtering + money stripping) |
 | 5 | Super Supervisor: live board, team coordination, task verification, notifications |
+| 6 | Owner: dashboard with budget vs. actual, project CRUD with budget history, cost drill-down, user management, notification preferences |
 
-### 🔲 Next Up: Phase 6 — Owner Features
+Phase 6 added two backend routers (`routes/owner.ts`, `routes/users.ts`) plus three new
+mobile screens (`project-detail.tsx`, `users.tsx`, `notification-prefs.tsx`). Spend
+figures are always derived from `payments` / `material_purchases` / `petty_cash` — see
+`.agents/DATA_MODELS.md` → "Derived Values".
 
-**This is the immediate next task.** The screens exist as placeholders. Build:
+### 🔲 Next Up: Phase 7 — Accountant Features
 
-1. **Dashboard** (`(owner)/dashboard.tsx`): Stat cards (active projects, teams, idle, pending), budget vs. actual spend charts, drill-down to cost breakdown
-2. **Project Management** (`(owner)/projects.tsx`): Create/edit projects with budget breakdown by category, team assignments, timeline, budget change history
-3. **Settings** (`(owner)/settings.tsx`): Create/edit users with role assignment, notification preferences
-
-### 🔲 Phase 7 — Accountant Features
-
-Placeholder screens exist. Build:
+**This is the immediate next task.** Placeholder screens exist. Build:
 1. **Payment Queue** (`(accountant)/payment-queue.tsx`): Daily wages from attendance, milestone payments, lump-sum scheduling
 2. **Purchases** (`(accountant)/purchases.tsx`): Material purchase list, flag missing receipts
 3. **Reconciliation** (`(accountant)/reconciliation.tsx`): Petty cash per supervisor
@@ -269,6 +269,16 @@ Photo compression, offline UX indicators, error handling, skeleton states, app i
 ## Known Issues & Recent Fixes
 
 1. **Sync pull response format (FIXED 2026-08-11):** The backend `/api/sync/pull` was returning `{ changes, timestamp }` directly instead of `{ success: true, data: { changes, timestamp } }`. The mobile `apiFetch` client checks `result.success`, so sync always failed. Fixed by wrapping the response.
+
+2. **`photoSync.ts` does not compile (OPEN):** `apps/mobile/src/lib/photoSync.ts:49` uses
+   `FileSystem.FileSystemUploadType`, which the installed `expo-file-system` no longer
+   exports — `tsc --noEmit` fails on it and photo upload is likely broken at runtime.
+   The new API lives under `expo-file-system/legacy` (or needs rewriting to the current
+   upload API). Slated for Phase 9 alongside making the photo queue persistent.
+
+3. **Accountant screens read money data (Phase 7):** Accountant is in
+   `MONEY_VISIBLE_ROLES`, so no money-filter changes are needed for Phase 7 — but
+   never widen that constant to add other roles.
 
 ---
 

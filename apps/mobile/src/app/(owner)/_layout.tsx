@@ -44,6 +44,17 @@ export default function OwnerLayout() {
           tabBarIcon: ({ color }) => <TabIcon emoji="⚙️" color={color} />,
         }}
       />
+
+      {/* Detail screens — reachable by navigation, not shown in the tab bar */}
+      <Tabs.Screen
+        name="project-detail"
+        options={{ href: null, title: 'Project Costs' }}
+      />
+      <Tabs.Screen name="users" options={{ href: null, title: 'Manage Users' }} />
+      <Tabs.Screen
+        name="notification-prefs"
+        options={{ href: null, title: 'Notifications' }}
+      />
     </Tabs>
   );
 }

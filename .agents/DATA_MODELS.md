@@ -14,6 +14,7 @@
 | `phone` | string? | Optional |
 | `role` | Role enum | `owner`, `super_supervisor`, `site_supervisor`, `accountant` |
 | `assignedSites` | string[] | Project IDs (stored as JSON string in WatermelonDB) |
+| `notificationPrefs` | Record<NotificationType, boolean> | Backend only — missing keys mean enabled |
 | `isActive` | boolean | Soft deactivation |
 | `created_at` | number | Timestamp (ms) |
 | `updated_at` | number | Timestamp (ms) |
@@ -192,7 +193,7 @@ Links a team to a project (many-to-many with extra fields).
 | `title` | string | |
 | `message` | string | |
 | `metadata` | string | JSON — extra context for deep linking |
-| `is_read` | boolean | |
+| `read` | boolean | Field is named `read` in the Mongoose model and route filters |
 | `created_at` / `updated_at` | number | |
 
 ---
@@ -208,6 +209,22 @@ const MONEY_FIELDS = [
   'expenses', 'dailyRate', 'totalCost', 'costBreakdown'
 ];
 ```
+
+---
+
+## Derived Values (Never Stored)
+
+Spend figures are computed on read, not persisted on the project:
+
+| Figure | Source |
+|--------|--------|
+| Labor spend | `payments` where type is `daily_wage`, `milestone`, or `lump_sum_installment` |
+| Materials spend | sum of `material_purchases.amount` |
+| Petty cash spend | sum of `petty_cash.expenses[].amount` |
+| Budget total | sum of the `BudgetCategory` keys on `project.budget` (`byTrade` excluded — it's a nested breakdown, not a bucket) |
+
+`petty_cash_topup` payments are deliberately excluded from labor so the same money
+isn't counted both as a payment and as a petty cash expense.
 
 ---
 

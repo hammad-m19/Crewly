@@ -1,7 +1,7 @@
 # Crewly — Project Progress Tracker
 
 > Construction Company Management App — Offline-first mobile + backend
-> Last updated: 2026-08-11
+> Last updated: 2026-08-11 (Phase 6 complete)
 
 ---
 
@@ -132,26 +132,54 @@
 ---
 
 ## Phase 6: Owner Features
-> **Status: 🔲 NOT STARTED**
+> **Status: ✅ COMPLETE**
 
-### Mobile — Project Management
-- [ ] Create project form (name, location, timeline, budget, team assignments)
-- [ ] Edit project (budget history, team reassignments)
-- [ ] Project detail view with cost breakdown + change history
+### Backend
+- [x] `routes/owner.ts` — Owner-only aggregation endpoints
+  - [x] `GET /owner/dashboard` — company summary, pending actions, per-project budget vs. actual
+  - [x] `GET /owner/projects/:id/cost-breakdown` — category/trade actuals, transactions, budget audit trail
+- [x] `routes/users.ts` — user management + notification preferences
+  - [x] `GET /users` (Owner), `POST /users` (Owner), `PATCH /users/:id` (Owner)
+  - [x] `GET|PATCH /users/me/notification-prefs` (any role)
+- [x] `models/User.ts` — added `notificationPrefs`
+- [x] `packages/shared` — `NotificationPreferences` + `DEFAULT_NOTIFICATION_PREFERENCES`
+- [x] `server.ts` — mounted `/api/owner` (with moneyFilter) and `/api/users`
+- [x] Integration test (`test-owner-endpoints.ts`) — 31 assertions, verified
 
-### Mobile — Dashboard
-- [ ] Live stat cards (active projects, teams, idle, pending actions)
-- [ ] Budget vs. actual spend comparisons
-- [ ] Drill-down to full cost breakdown
+### Mobile — Dashboard (`(owner)/dashboard.tsx`)
+- [x] Live stat cards (active projects, teams working, idle teams, pending actions)
+- [x] Company-wide budget vs. actual with progress bar + over-budget count
+- [x] "Needs Attention" panel (unverified tasks, overdue deliveries, missing receipts, unreconciled floats)
+- [x] Per-project spend cards with status flags; active sites listed before inactive
+- [x] Drill-down to full cost breakdown + pull-to-refresh + refresh on focus
+
+### Mobile — Project Management (`(owner)/projects.tsx`)
+- [x] Create project (name, location, timeline, status, supervisor, budget by category)
+- [x] Edit project with live budget total; reason captured when the budget changes
+- [x] Budget change count/date surfaced per project card
+- [x] Validation: required fields, date format, end-after-start, positive amounts
+
+### Mobile — Project Detail (`(owner)/project-detail.tsx`)
+- [x] Budget vs. actual by category, plus labor split by trade
+- [x] Labor / materials / petty cash split + petty cash on hand
+- [x] Team assignments: assign (with lump-sum agreed total) and unassign
+- [x] Recent transactions with review flags for missing receipts / late entries
+- [x] Budget change history with author, date, and reason
 
 ### Mobile — Settings
-- [ ] Manage Users (create/edit with role assignment)
-- [ ] Notification preferences
+- [x] Manage Users (`(owner)/users.tsx`) — create/edit, role assignment, site assignment,
+      activate/deactivate, password reset; self-demotion and self-deactivation blocked
+- [x] Notification preferences (`(owner)/notification-prefs.tsx`) — per-type toggles, optimistic save
+- [x] `settings.tsx` wired to both screens; detail routes hidden from the tab bar
+
+### Shared UI
+- [x] `components/ui/ProgressBar.tsx` — budget bar that shifts green → amber → red
+- [x] `lib/format.ts` — money, compact money, date, and label formatters
 
 ---
 
 ## Phase 7: Accountant Features
-> **Status: 🔲 NOT STARTED**
+> **Status: 🔲 NOT STARTED — NEXT UP**
 
 ### Mobile — Payment Queue
 - [ ] Daily wages: attendance data → computed wages
@@ -204,7 +232,7 @@
 | **3** | Material orders + purchases + petty cash | ✅ Done |
 | **4** | Sync engine (offline → server) | ✅ Done |
 | **5** | Super Supervisor: live board, coordination, verification | ✅ Done |
-| **6** | Owner: project management, dashboard, drill-down | 🔲 **Next** |
-| **7** | Accountant: payment queue, reconciliation, cost reports | 🔲 Pending |
+| **6** | Owner: project management, dashboard, drill-down | ✅ Done |
+| **7** | Accountant: payment queue, reconciliation, cost reports | 🔲 **Next** |
 | **8** | Push notifications (FCM) | 🔲 Pending |
 | **9** | Polish: compression, offline UX, error handling, build | 🔲 Pending |

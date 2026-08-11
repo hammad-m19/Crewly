@@ -1,10 +1,12 @@
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useAuthStore } from '../../store/authStore';
 
 export default function OwnerSettings() {
+  const router = useRouter();
   const { user, logout } = useAuthStore();
 
   const handleLogout = () => {
@@ -32,8 +34,16 @@ export default function OwnerSettings() {
 
       {/* Settings Options */}
       <View style={styles.section}>
-        <SettingItem label="Manage Users" emoji="👥" onPress={() => Alert.alert('Coming Soon')} />
-        <SettingItem label="Notification Preferences" emoji="🔔" onPress={() => Alert.alert('Coming Soon')} />
+        <SettingItem
+          label="Manage Users"
+          emoji="👥"
+          onPress={() => router.push('/(owner)/users')}
+        />
+        <SettingItem
+          label="Notification Preferences"
+          emoji="🔔"
+          onPress={() => router.push('/(owner)/notification-prefs')}
+        />
         <SettingItem label="App Version" emoji="ℹ️" value="1.0.0" />
       </View>
 

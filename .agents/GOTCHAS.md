@@ -95,6 +95,25 @@ MongoDB records are never physically deleted. Instead, `_deleted: true` is set. 
 
 ---
 
+## ⚠️ Adding Fields to Mongoose Models That Sync
+
+Extra fields on a Mongoose model are safe: sync pull sends them, and WatermelonDB
+discards keys that aren't declared in its table schema (this is why `passwordHash`,
+`fcmToken`, and `notificationPrefs` never reach the device tables). You only need a
+schema version bump + migration when you want a field **stored on the device**.
+
+---
+
+## ⚠️ Expo Router: New Screens Break `tsc` Until Types Regenerate
+
+Typed routes are on, so route strings are checked against
+`apps/mobile/.expo/types/router.d.ts`, which only the dev server regenerates. After
+adding a screen, `npx tsc --noEmit` reports "not assignable" for the new path until
+`npx expo start` has run once. Also remember new files in a tab group become tabs
+unless declared with `options={{ href: null }}`.
+
+---
+
 ## ⚠️ Photo Queue Persistence
 
 The `PhotoSyncQueue` in `lib/photoSync.ts` is **in-memory only**. If the app is killed during upload, pending photos are lost. This is a known limitation to be fixed in Phase 9.

@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { Role } from '@crewly/shared';
+import { Role, NotificationPreferences } from '@crewly/shared';
 
 export interface IUser extends Document {
   name: string;
@@ -9,6 +9,8 @@ export interface IUser extends Document {
   role: Role;
   assignedSites: mongoose.Types.ObjectId[];
   fcmToken?: string;
+  /** Per-notification-type opt in/out. Missing keys default to enabled. */
+  notificationPrefs: NotificationPreferences;
   isActive: boolean;
   created_at: number;
   updated_at: number;
@@ -28,6 +30,7 @@ const userSchema = new Schema<IUser>(
     },
     assignedSites: [{ type: Schema.Types.ObjectId, ref: 'Project' }],
     fcmToken: { type: String },
+    notificationPrefs: { type: Schema.Types.Mixed, default: {} },
     isActive: { type: Boolean, default: true },
     // WatermelonDB sync fields
     created_at: { type: Number, default: () => Date.now() },

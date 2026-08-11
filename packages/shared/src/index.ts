@@ -171,6 +171,9 @@ export interface StatusChange {
   changedBy: string; // userId
 }
 
+/** Per-notification-type opt in/out, stored on the user record */
+export type NotificationPreferences = Partial<Record<NotificationType, boolean>>;
+
 /** Assignment history entry */
 export interface AssignmentChange {
   action: 'assigned' | 'unassigned' | 'payment_type_changed';
@@ -271,6 +274,14 @@ export const MONEY_FIELDS = [
 
 /** Roles allowed to see financial data */
 export const MONEY_VISIBLE_ROLES: Role[] = [Role.OWNER, Role.ACCOUNTANT];
+
+/** Notification types are opt-in by default — used when a user has no saved preferences */
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = Object.values(
+  NotificationType
+).reduce<NotificationPreferences>((acc, type) => {
+  acc[type] = true;
+  return acc;
+}, {});
 
 /** Threshold in days to flag a late material purchase entry */
 export const LATE_PURCHASE_THRESHOLD_DAYS = 3;

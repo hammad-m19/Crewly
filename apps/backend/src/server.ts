@@ -16,6 +16,8 @@ import syncRoutes from './routes/sync';
 import verificationRoutes from './routes/verification';
 import coordinationRoutes from './routes/coordination';
 import notificationRoutes from './routes/notifications';
+import ownerRoutes from './routes/owner';
+import userRoutes from './routes/users';
 import { moneyFilter } from './middleware/moneyFilter';
 import { authenticate } from './middleware/auth';
 
@@ -68,6 +70,8 @@ app.use('/api/sync', authenticate, moneyFilter, syncRoutes);
 app.use('/api/verifications', authenticate, verificationRoutes);
 app.use('/api/coordination', authenticate, coordinationRoutes);
 app.use('/api/notifications', authenticate, notificationRoutes);
+app.use('/api/owner', authenticate, moneyFilter, ownerRoutes);
+app.use('/api/users', authenticate, userRoutes);
 
 // 404 handler
 app.use((_req, res) => {

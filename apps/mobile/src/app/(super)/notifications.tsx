@@ -38,10 +38,11 @@ export default function NotificationsScreen() {
   const fetchNotifications = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     try {
-      const result = await apiFetch<any>('/notifications');
+      const result = await apiFetch<NotificationItem[]>('/notifications');
       if (result.success) {
         setNotifications(result.data || []);
-        setUnreadCount(result.unreadCount || 0);
+        // The list endpoint returns unreadCount alongside `data`, not inside it.
+        setUnreadCount((result as { unreadCount?: number }).unreadCount || 0);
       }
     } catch (e) {
       console.error('Failed to fetch notifications:', e);
