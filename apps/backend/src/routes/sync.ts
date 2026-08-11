@@ -94,8 +94,11 @@ router.get('/pull', async (req: AuthRequest, res: Response): Promise<void> => {
     }
 
     res.json({
-      changes,
-      timestamp: Date.now(),
+      success: true,
+      data: {
+        changes,
+        timestamp: Date.now(),
+      },
     });
   } catch (error) {
     console.error('Sync pull error:', error);
