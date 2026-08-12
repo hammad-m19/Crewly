@@ -4,10 +4,10 @@ import { colors } from '../../theme/colors';
 import { useRoleTabNavigator } from '../../theme/navigation';
 
 export default function OwnerLayout() {
-  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.owner);
+  const { safeAreaInsets, screenOptions, tabBar } = useRoleTabNavigator(colors.role.owner);
 
   return (
-    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions} tabBar={tabBar}>
       <Tabs.Screen
         name="dashboard"
         options={{

@@ -4,10 +4,10 @@ import { colors } from '../../theme/colors';
 import { useRoleTabNavigator } from '../../theme/navigation';
 
 export default function AccountantLayout() {
-  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.accountant);
+  const { safeAreaInsets, screenOptions, tabBar } = useRoleTabNavigator(colors.role.accountant);
 
   return (
-    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions} tabBar={tabBar}>
       <Tabs.Screen name="payment-queue" options={{
         title: 'Payments',
         headerTitle: 'Payment Queue',

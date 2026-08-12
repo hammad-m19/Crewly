@@ -48,7 +48,7 @@ router.post(
           res.status(400).json({
             success: false,
             error: {
-              message: 'Each entry needs teamId and morningPresence (on_site | not_on_site).',
+              message: 'Each entry needs teamId and morningPresence (on_site | not_on_site | not_needed).',
             },
           });
           return;
@@ -94,6 +94,9 @@ router.post(
             headcount > 0
           ) {
             existing.headcountPresent = headcount;
+          }
+          if (incoming.morningPresence !== MorningPresence.ON_SITE) {
+            // Keep EOD headcount unless we're seeding from morning on-site
           }
         } else {
           report.teamEntries.push({

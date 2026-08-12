@@ -18,17 +18,74 @@ router.get('/', async (_req: AuthRequest, res: Response): Promise<void> => {
   }
 });
 
-/** POST /api/teams — Owner creates a team */
-router.post('/', requireRole(Role.OWNER), async (req: AuthRequest, res: Response): Promise<void> => {
+/** POST /api/teams — Owner or Site Supervisor creates a team.
+ * Site Supervisors must pass projectId; the team is auto-assigned to that site.
+ */
+router.post('/', requireRole(Role.OWNER, Role.SITE_SUPERVISOR), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const { name, trade, defaultPaymentType, contactPhone } = req.body;
+    const { name, trade, defaultPaymentType, contactPhone, projectId } = req.body;
     if (!name || !trade) {
       res.status(400).json({ success: false, error: { message: 'name and trade are required.' } });
       return;
     }
-    const team = new Team({ name, trade, defaultPaymentType, contactPhone });
+
+    if (req.user!.role === Role.SITE_SUPERVISOR) {
+      if (!projectId) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'projectId is required when a Site Supervisor creates a team.' },
+        });
+        return;
+      }
+
+      const user = await (await import('../models/User')).User.findById(req.user!.userId);
+      const assigned = (user?.assignedSites || []).map((id) => id.toString());
+      // If they have assigned sites, project must be one of them; empty list = allow any (dev)
+      if (assigned.length > 0 && !assigned.includes(String(projectId))) {
+        res.status(403).json({
+          success: false,
+          error: { message: 'You can only add teams to your assigned site(s).' },
+        });
+        return;
+      }
+    }
+
+    const team = new Team({
+      name,
+      trade,
+      defaultPaymentType: defaultPaymentType || 'daily_wage',
+      contactPhone,
+    });
     await team.save();
-    res.status(201).json({ success: true, data: team.toObject() });
+
+    let assignment = null;
+    if (projectId) {
+      assignment = new TeamSiteAssignment({
+        projectId,
+        teamId: team._id,
+        paymentType: defaultPaymentType || 'daily_wage',
+        assignedDate: new Date().toISOString().split('T')[0],
+        unassignedDate: null,
+        assignmentHistory: [{
+          action: 'assigned',
+          newValue: { projectId, paymentType: defaultPaymentType || 'daily_wage' },
+          changedBy: req.user!.userId,
+          changedAt: new Date().toISOString(),
+          reason: req.user!.role === Role.SITE_SUPERVISOR
+            ? 'Created by site supervisor for morning check-in'
+            : undefined,
+        }],
+      });
+      await assignment.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      data: {
+        ...team.toObject(),
+        assignment: assignment ? assignment.toObject() : null,
+      },
+    });
   } catch (error) {
     console.error('Create team error:', error);
     res.status(500).json({ success: false, error: { message: 'Internal server error.' } });
