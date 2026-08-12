@@ -6,10 +6,18 @@ import { useSyncStore } from '../../store/syncStore';
 
 export default function SiteSupervisorLayout() {
   const pendingCount = useSyncStore((s) => s.pendingChangesCount);
-  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.site_supervisor);
+  const { safeAreaInsets, screenOptions, tabBar } = useRoleTabNavigator(
+    colors.role.site_supervisor
+  );
 
   return (
-    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions} tabBar={tabBar}>
+      <Tabs.Screen name="morning-checkin" options={{
+        title: 'Check-in',
+        headerTitle: 'Morning Check-In',
+        tabBarIcon: ({ color }) => <TabIcon emoji="🌅" color={color} />,
+        tabBarLabelStyle: { fontSize: 10 },
+      }} />
       <Tabs.Screen name="daily-report" options={{
         title: 'Report',
         headerTitle: "Today's Report",
@@ -23,15 +31,15 @@ export default function SiteSupervisorLayout() {
         title: 'Petty Cash',
         tabBarIcon: ({ color }) => <TabIcon emoji="💰" color={color} />,
       }} />
-      <Tabs.Screen name="sync-status" options={{
-        title: 'Sync',
-        tabBarIcon: ({ color }) => <TabIcon emoji="🔄" color={color} />,
-        tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
-      }} />
       <Tabs.Screen name="profile" options={{
         title: 'Profile',
         headerTitle: 'Profile',
         tabBarIcon: ({ color }) => <TabIcon emoji="👤" color={color} />,
+      }} />
+      <Tabs.Screen name="sync-status" options={{
+        href: null,
+        title: 'Sync',
+        tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
       }} />
       <Tabs.Screen name="notifications" options={{ href: null, title: 'Alerts' }} />
       <Tabs.Screen name="material-order" options={{ href: null, title: 'New Order' }} />

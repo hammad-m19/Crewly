@@ -24,7 +24,7 @@ interface ProjectSummary {
   remaining: number;
   percentUsed: number | null;
   overBudget: boolean;
-  flags: { working: number; idle: number; noShow: number; unverified: number };
+  flags: { working: number; idle: number; noShow: number; morningAbsent?: number; unverified: number };
 }
 
 interface DashboardData {
@@ -34,6 +34,7 @@ interface DashboardData {
     teamsWorking: number;
     idleTeams: number;
     noShowTeams: number;
+    morningAbsentTeams?: number;
     pendingActions: number;
   };
   pendingActions: {
@@ -153,6 +154,15 @@ export default function OwnerDashboard() {
           color={colors.warning.main}
           emoji="⚠️"
         />
+        <StatCard
+          title="Not On Site"
+          value={String(summary?.morningAbsentTeams ?? '—')}
+          color={colors.danger.main}
+          emoji="🌅"
+        />
+      </View>
+
+      <View style={styles.statsGrid}>
         <StatCard
           title="Pending Actions"
           value={String(summary?.pendingActions ?? '—')}
@@ -318,6 +328,12 @@ function ProjectRow({
         )}
         {project.flags.noShow > 0 && (
           <MiniPill label={`${project.flags.noShow} no-show`} color={colors.danger.main} />
+        )}
+        {(project.flags.morningAbsent ?? 0) > 0 && (
+          <MiniPill
+            label={`${project.flags.morningAbsent} not on site`}
+            color={colors.accent[800]}
+          />
         )}
         {project.overBudget && <MiniPill label="over budget" color={colors.danger.main} />}
       </View>

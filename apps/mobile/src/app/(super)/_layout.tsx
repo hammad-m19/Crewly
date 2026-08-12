@@ -4,10 +4,12 @@ import { colors } from '../../theme/colors';
 import { useRoleTabNavigator } from '../../theme/navigation';
 
 export default function SuperSupervisorLayout() {
-  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.super_supervisor);
+  const { safeAreaInsets, screenOptions, tabBar } = useRoleTabNavigator(
+    colors.role.super_supervisor
+  );
 
   return (
-    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions} tabBar={tabBar}>
       <Tabs.Screen name="live-board" options={{
         title: 'Live Board',
         headerTitle: 'All Sites',
