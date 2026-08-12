@@ -12,6 +12,43 @@ const router = Router();
 const NOTIFICATION_TYPES: string[] = Object.values(NotificationType);
 
 /**
+ * PATCH /api/users/me/fcm-token
+ * Store (or clear) the device FCM token used for push notifications.
+ */
+router.patch('/me/fcm-token', async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { fcmToken } = req.body;
+
+    if (fcmToken !== null && fcmToken !== undefined && typeof fcmToken !== 'string') {
+      res.status(400).json({
+        success: false,
+        error: { message: 'fcmToken must be a string or null.' },
+      });
+      return;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user!.userId,
+      { fcmToken: fcmToken || null, updated_at: Date.now() },
+      { new: true }
+    ).select('fcmToken');
+
+    if (!user) {
+      res.status(404).json({ success: false, error: { message: 'User not found.' } });
+      return;
+    }
+
+    res.json({
+      success: true,
+      data: { fcmToken: user.fcmToken || null },
+    });
+  } catch (error) {
+    console.error('Update FCM token error:', error);
+    res.status(500).json({ success: false, error: { message: 'Internal server error.' } });
+  }
+});
+
+/**
  * GET /api/users/me/notification-prefs
  * Any authenticated user reads their own preferences. Types the user has never
  * touched come back enabled.

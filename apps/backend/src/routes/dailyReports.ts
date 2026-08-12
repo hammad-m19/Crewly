@@ -1,10 +1,10 @@
 import { Router, Response } from 'express';
 import { DailyReport } from '../models/DailyReport';
 import { Notification } from '../models/Notification';
-import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/roleGuard';
 import { Role, AttendanceStatus, NotificationType } from '@crewly/shared';
+import { notifyRole } from '../services/notify';
 
 const router = Router();
 
@@ -160,67 +160,59 @@ router.patch('/:id', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest,
 
 /**
  * Process no-shows and idle teams from team entries.
- * Creates notifications for Super Supervisors same-day.
+ * Creates notifications for Super Supervisors same-day (via notify service).
  */
 async function processAlerts(
-  teamEntries: Array<{ attendanceStatus: string; idleReason?: string; teamId?: string }>,
+  teamEntries: Array<{ attendanceStatus: string; idleReason?: string; teamId?: string | null }>,
   projectId: string,
   date: string,
   submittedBy: string
 ): Promise<void> {
   try {
-    // Find all Super Supervisors to notify
-    const superSupervisors = await User.find({
-      role: Role.SUPER_SUPERVISOR,
-      isActive: true,
-      _deleted: false,
-    });
+    const since = Date.now() - 24 * 60 * 60 * 1000;
 
     for (const entry of teamEntries) {
-      // No-show detection — notify immediately
+      const teamId = entry.teamId || 'local_labor';
+
+      // No-show detection — notify immediately (idempotent within 24h)
       if (entry.attendanceStatus === AttendanceStatus.NO_SHOW) {
-        for (const sup of superSupervisors) {
-          const existing = await Notification.findOne({
-            recipientUserId: sup._id,
+        const existing = await Notification.findOne({
+          type: NotificationType.NO_SHOW,
+          projectId,
+          _deleted: false,
+          metadata: { $regex: teamId },
+          created_at: { $gte: since },
+        }).lean();
+
+        if (!existing) {
+          await notifyRole(Role.SUPER_SUPERVISOR, {
             type: NotificationType.NO_SHOW,
             projectId,
-            'metadata': { $regex: entry.teamId || 'local_labor' },
-            created_at: { $gte: Date.now() - 24 * 60 * 60 * 1000 },
+            title: '🚫 No-Show Reported',
+            message: `A team was marked as no-show on ${date}. This may block dependent trades.`,
+            metadata: { teamId: entry.teamId, date, reportedBy: submittedBy },
           });
-
-          if (!existing) {
-            await new Notification({
-              recipientUserId: sup._id,
-              type: NotificationType.NO_SHOW,
-              projectId,
-              title: '🚫 No-Show Reported',
-              message: `A team was marked as no-show on ${date}. This may block dependent trades.`,
-              metadata: JSON.stringify({ teamId: entry.teamId, date, reportedBy: submittedBy }),
-            }).save();
-          }
         }
       }
 
       // Idle team detection
       if (entry.idleReason && entry.idleReason !== 'no_show') {
-        for (const sup of superSupervisors) {
-          const existing = await Notification.findOne({
-            recipientUserId: sup._id,
+        const existing = await Notification.findOne({
+          type: NotificationType.IDLE_TEAM,
+          projectId,
+          _deleted: false,
+          metadata: { $regex: teamId },
+          created_at: { $gte: since },
+        }).lean();
+
+        if (!existing) {
+          await notifyRole(Role.SUPER_SUPERVISOR, {
             type: NotificationType.IDLE_TEAM,
             projectId,
-            created_at: { $gte: Date.now() - 24 * 60 * 60 * 1000 },
+            title: '⚠️ Team Idle',
+            message: `A team is idle: ${entry.idleReason.replace(/_/g, ' ')}. Date: ${date}`,
+            metadata: { teamId: entry.teamId, idleReason: entry.idleReason, date },
           });
-
-          if (!existing) {
-            await new Notification({
-              recipientUserId: sup._id,
-              type: NotificationType.IDLE_TEAM,
-              projectId,
-              title: '⚠️ Team Idle',
-              message: `A team is idle: ${entry.idleReason?.replace(/_/g, ' ')}. Date: ${date}`,
-              metadata: JSON.stringify({ teamId: entry.teamId, idleReason: entry.idleReason, date }),
-            }).save();
-          }
         }
       }
     }

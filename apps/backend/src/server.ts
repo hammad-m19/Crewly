@@ -22,6 +22,8 @@ import paymentRoutes from './routes/payments';
 import accountantRoutes from './routes/accountant';
 import { moneyFilter } from './middleware/moneyFilter';
 import { authenticate } from './middleware/auth';
+import { initFirebase } from './config/firebase';
+import { startEscalationEngine } from './services/escalation';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -100,6 +102,8 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // ----------------------------------------------------------
 const start = async () => {
   await connectDB();
+  initFirebase();
+  startEscalationEngine();
   app.listen(PORT, () => {
     console.log(`🏗️  Crewly API running on port ${PORT}`);
     console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);

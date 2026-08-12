@@ -4,11 +4,10 @@ import { Team } from '../models/Team';
 import { Project } from '../models/Project';
 import { DailyReport } from '../models/DailyReport';
 import { TaskVerification } from '../models/TaskVerification';
-import { Notification } from '../models/Notification';
-import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/roleGuard';
 import { Role, NotificationType } from '@crewly/shared';
+import { notify } from '../services/notify';
 
 const router = Router();
 
@@ -203,17 +202,17 @@ router.post('/assign', requireRole(Role.SUPER_SUPERVISOR), async (req: AuthReque
     const project = await Project.findById(projectId);
     if (project && (project as any).siteSupervisorId) {
       const team = await Team.findById(teamId);
-      await new Notification({
+      await notify({
         recipientUserId: (project as any).siteSupervisorId,
         type: NotificationType.TEAM_ASSIGNED,
         projectId,
         title: '👷 New Team Assigned',
         message: `${team?.name || 'A team'} has been assigned to ${project.name}.`,
-        metadata: JSON.stringify({
-          teamId: teamId,
+        metadata: {
+          teamId,
           assignmentId: assignment._id.toString(),
-        }),
-      }).save();
+        },
+      });
     }
 
     res.status(201).json({ success: true, data: assignment.toObject() });
