@@ -7,6 +7,11 @@
     "icon": "./assets/images/icon.png",
     "scheme": "crewly",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1E3F7E"
+    },
     "ios": {
       "bundleIdentifier": "com.crewly.app",
       "icon": "./assets/expo.icon"
@@ -55,7 +60,7 @@
         {
           "backgroundColor": "#1E3F7E",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 200
         }
       ]
     ],
