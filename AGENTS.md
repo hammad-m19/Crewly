@@ -48,7 +48,11 @@ Crewly/
 │   │       ├── server.ts           # Express app + route mounting + middleware chain
 │   │       ├── config/
 │   │       │   ├── db.ts           # MongoDB connection (mongoose.connect)
-│   │       │   └── auth.ts         # JWT secrets, expiry, salt rounds
+│   │       │   ├── auth.ts         # JWT secrets, expiry, salt rounds
+│   │       │   └── firebase.ts     # Optional Firebase Admin (FCM); no-op without creds
+│   │       ├── services/
+│   │       │   ├── notify.ts       # In-app Notification + optional FCM (respects prefs)
+│   │       │   └── escalation.ts   # Hourly material-overdue + 24h idle/no-show → Owner
 │   │       ├── middleware/
 │   │       │   ├── auth.ts         # JWT verification → req.user (AuthRequest)
 │   │       │   ├── roleGuard.ts    # requireRole(Role.OWNER, ...) factory
@@ -67,33 +71,37 @@ Crewly/
 │   │       │   ├── pettyCash.ts, verification.ts
 │   │       │   ├── coordination.ts, notifications.ts
 │   │       │   ├── owner.ts        # Dashboard aggregation + cost breakdown (Owner only)
-│   │       │   ├── users.ts        # User management + notification preferences
+│   │       │   ├── users.ts        # User management + notification prefs + FCM token
 │   │       │   └── (each route is mounted in server.ts under /api/*)
 │   │       └── scripts/
 │   │           └── seed.ts         # Creates initial users + sample teams
 │   │
 │   └── mobile/                     # Expo + React Native app
 │       ├── package.json            # Dependencies (expo, watermelondb, zustand, etc.)
-│       ├── app.json                # Expo config
+│       ├── app.json                # Expo config (icon/splash still placeholder assets)
+│       ├── eas.json                # EAS Build: development / preview / production
 │       ├── babel.config.js         # Babel with decorators (for WatermelonDB)
 │       └── src/
 │           ├── app/                # Expo Router — file-based routing
-│           │   ├── _layout.tsx     # Root: DatabaseProvider, auth guard, auto-sync
+│           │   ├── _layout.tsx     # Root: DatabaseProvider, auth guard, auto-sync, offline banner, push register
 │           │   ├── index.tsx       # Redirect by role
 │           │   ├── (auth)/         # Login screen
-│           │   ├── (site)/         # Site Supervisor screens (6 screens)
-│           │   ├── (super)/        # Super Supervisor screens (4 screens)
-│           │   ├── (owner)/        # Owner screens (3 tabs + 3 hidden detail routes)
-│           │   └── (accountant)/   # Accountant screens (4 screens — PLACEHOLDER)
+│           │   ├── (site)/         # Site Supervisor (tabs + hidden forms + Alerts)
+│           │   ├── (super)/        # Super Supervisor (Live Board, Coordinate, Verify, Alerts)
+│           │   ├── (owner)/        # Owner (3 tabs + hidden detail/alerts/prefs routes)
+│           │   └── (accountant)/   # Accountant (Payments, Purchases, Reconcile, Reports, Alerts)
 │           ├── db/
 │           │   ├── index.ts        # WatermelonDB Database instance
 │           │   ├── schema.ts       # SQLite schema (11 tables, mirrors MongoDB)
 │           │   ├── migrations.ts   # Schema migrations (currently v1)
 │           │   └── models/         # WatermelonDB Model classes (11 models)
 │           ├── lib/
-│           │   ├── api.ts          # apiFetch() — handles auth headers, token refresh, errors
+│           │   ├── api.ts          # apiFetch() — auth, token refresh, GET retry/backoff
 │           │   ├── sync.ts         # performSync(), setupAutoSync() — WatermelonDB ↔ backend
-│           │   └── photoSync.ts    # Photo upload queue (background upload)
+│           │   ├── photoSync.ts    # Photo queue (compress + persist + upload)
+│           │   └── pushNotifications.ts  # Permission + FCM/APNs token → PATCH /users/me/fcm-token
+│           ├── hooks/
+│           │   └── useConnectivity.ts    # Offline/last-sync helpers from syncStore
 │           ├── store/
 │           │   ├── authStore.ts    # Zustand — user, token, login/logout (SecureStore)
 │           │   └── syncStore.ts    # Zustand — isSyncing, isOnline, lastSyncAt, errors
@@ -101,7 +109,7 @@ Crewly/
 │           │   ├── colors.ts       # Color palette (primary, semantic, background)
 │           │   ├── typography.ts   # Font sizes, weights, line heights
 │           │   └── spacing.ts      # Spacing scale
-│           └── components/         # Shared UI components
+│           └── components/         # Shared UI: NotificationsFeed, ErrorState, EmptyState, LoadingSkeleton
 ```
 
 ---
@@ -227,12 +235,14 @@ Copy `apps/backend/.env.example` → `apps/backend/.env`. Key vars:
 - `MONGODB_URI` — MongoDB connection string
 - `JWT_SECRET` / `JWT_REFRESH_SECRET` — Change in production
 - `PORT` — API port (default 3000)
+- `FIREBASE_SERVICE_ACCOUNT_PATH` / `GOOGLE_APPLICATION_CREDENTIALS` — optional; without either, FCM is a no-op
+- `DISABLE_ESCALATION` — set `true` in tests so the hourly loop does not run (scripts call `runEscalationCheck()` directly)
 
 ---
 
 ## What's Done vs. What's Next
 
-### ✅ Completed (Phases 1–6)
+### ✅ Completed (Phases 1–9)
 
 | Phase | What |
 |-------|------|
@@ -243,6 +253,8 @@ Copy `apps/backend/.env.example` → `apps/backend/.env`. Key vars:
 | 5 | Super Supervisor: live board, team coordination, task verification, notifications |
 | 6 | Owner: dashboard with budget vs. actual, project CRUD with budget history, cost drill-down, user management, notification preferences |
 | 7 | Accountant: payment queue (wages/milestones/lump-sums), purchases review, petty cash reconciliation, cost reports |
+| 8 | Push notifications: optional FCM, `notify`/`notifyRole`, hourly escalation, in-app feed for all roles |
+| 9 | Polish: photo compression + persistent queue, offline banner, GET retry, skeleton/error/empty states, EAS Build |
 
 Phase 6 added two backend routers (`routes/owner.ts`, `routes/users.ts`) plus three new
 mobile screens (`project-detail.tsx`, `users.tsx`, `notification-prefs.tsx`). Spend
@@ -256,13 +268,23 @@ accountant routes — change it in one place), and built out all four
 `(accountant)/` screens against those endpoints. Integration test:
 `apps/backend/test-accountant-endpoints.ts` (needs the API + MongoDB running).
 
-### 🔲 Next Up: Phase 8 — Push Notifications (FCM)
+Phase 8 added `config/firebase.ts` (optional Admin SDK), `services/notify.ts` (in-app
+row + FCM when creds and prefs allow), `services/escalation.ts` (hourly material
+overdue + 24h idle/no-show to Owner, idempotent keys), `PATCH /users/me/fcm-token`,
+and a shared `NotificationsFeed` on every role. Integration test:
+`apps/backend/test-notifications.ts` (11 assertions; needs the API + MongoDB).
 
-Firebase Cloud Messaging integration. `firebase-admin` is already in backend dependencies but not configured.
+Phase 9 fixed photo upload (`expo-file-system/legacy` + AsyncStorage queue +
+`expo-image-manipulator` 1200px JPEG 0.8), added `useConnectivity` + a global
+offline banner, GET retry/backoff in `apiFetch`, shared Error/Empty/Skeleton
+states on the main dashboards, and `eas.json` (dev/preview/production).
 
-### 🔲 Phase 9 — Polish
+### Leftovers (not a new phase)
 
-Photo compression, offline UX indicators, error handling, skeleton states, app icon, EAS Build config.
+- Branded app icon + splash — `app.json` still points at Expo placeholder assets
+- Real FCM on a physical device — needs Firebase service-account env vars on the API and an EAS/dev-client build (simulators skip; Expo Go is limited)
+
+All planned phases (1–9) are complete.
 
 ---
 
@@ -270,11 +292,11 @@ Photo compression, offline UX indicators, error handling, skeleton states, app i
 
 1. **Sync pull response format (FIXED 2026-08-11):** The backend `/api/sync/pull` was returning `{ changes, timestamp }` directly instead of `{ success: true, data: { changes, timestamp } }`. The mobile `apiFetch` client checks `result.success`, so sync always failed. Fixed by wrapping the response.
 
-2. **`photoSync.ts` does not compile (OPEN):** `apps/mobile/src/lib/photoSync.ts:49` uses
-   `FileSystem.FileSystemUploadType`, which the installed `expo-file-system` no longer
-   exports — `tsc --noEmit` fails on it and photo upload is likely broken at runtime.
-   The new API lives under `expo-file-system/legacy` (or needs rewriting to the current
-   upload API). Slated for Phase 9 alongside making the photo queue persistent.
+2. **`photoSync.ts` compile / persistence (FIXED Phase 9):** uploads use
+   `expo-file-system/legacy` (`FileSystemUploadType.MULTIPART`). The queue is
+   persisted in AsyncStorage (`@crewly/photo_upload_queue`) and hydrated from
+   root `_layout.tsx` after auth. Photos are compressed (1200px long edge, JPEG 0.8)
+   before enqueue. Mobile `tsc --noEmit` is clean.
 
 3. **Accountant screens read money data:** Accountant is in `MONEY_VISIBLE_ROLES`,
    so the Phase 7 endpoints work without money-filter changes — but never widen
@@ -286,6 +308,10 @@ Photo compression, offline UX indicators, error handling, skeleton states, app i
    tests therefore create their own throwaway supervisor accounts
    (`*@crewly.test`) instead of logging in as `site@crewly.com`. If you need the
    seed logins manually and they fail, reset via the Owner users screen.
+
+5. **Leftovers after Phase 9:** branded icon/splash still use Expo placeholder
+   assets in `app.json`. Real FCM delivery needs Firebase credentials on the API
+   and a physical device / EAS build (simulators skip registration; Expo Go is limited).
 
 ---
 

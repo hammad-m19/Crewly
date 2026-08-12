@@ -116,7 +116,11 @@ unless declared with `options={{ href: null }}`.
 
 ## ⚠️ Photo Queue Persistence
 
-The `PhotoSyncQueue` in `lib/photoSync.ts` is **in-memory only**. If the app is killed during upload, pending photos are lost. This is a known limitation to be fixed in Phase 9.
+The `PhotoSyncQueue` in `lib/photoSync.ts` is persisted in AsyncStorage
+(`@crewly/photo_upload_queue`) and hydrated on launch from root `_layout.tsx`.
+Uploads use `expo-file-system/legacy` (not the current `expo-file-system` default
+export). Photos are compressed to 1200px / JPEG 0.8 before enqueue. Failed tasks
+stay in the queue and are retried on the next `processQueue()` / hydrate.
 
 ---
 

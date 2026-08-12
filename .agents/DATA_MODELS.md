@@ -14,6 +14,7 @@
 | `phone` | string? | Optional |
 | `role` | Role enum | `owner`, `super_supervisor`, `site_supervisor`, `accountant` |
 | `assignedSites` | string[] | Project IDs (stored as JSON string in WatermelonDB) |
+| `fcmToken` | string? | Backend only — device push token; never synced to WatermelonDB |
 | `notificationPrefs` | Record<NotificationType, boolean> | Backend only — missing keys mean enabled |
 | `isActive` | boolean | Soft deactivation |
 | `created_at` | number | Timestamp (ms) |

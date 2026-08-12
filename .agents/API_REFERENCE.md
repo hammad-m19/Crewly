@@ -41,6 +41,9 @@ All endpoints except `/auth/login` and `/auth/refresh` require `Authorization: B
 { "success": true, "data": { "token": "new-jwt..." } }
 ```
 
+### POST /auth/fcm-token
+**Requires: Auth** — stores `fcmToken` on the current user. Mobile uses `PATCH /users/me/fcm-token` instead (supports clearing with `null`).
+
 ---
 
 ## Sync (WatermelonDB Protocol)
@@ -173,6 +176,20 @@ Returns `unreadCount`, `total`, `page`, and `limit` alongside `data` (not nested
 ### PATCH /api/notifications/:id/read
 ### PATCH /api/notifications/read-all
 
+In-app rows are created by `services/notify.ts` (`notify` / `notifyRole`). FCM is
+sent only when Firebase Admin is initialized **and** the recipient has an
+`fcmToken` **and** `notificationPrefs[type]` is not `false` (missing keys default
+to enabled). Daily reports notify Super Supervisors on no-show / idle (idempotent
+within 24h). Coordination assign notifies the project's Site Supervisor
+(`team_assigned`).
+
+Hourly escalation (`services/escalation.ts`, started from `server.ts` after DB
+connect): overdue material orders → Super Supervisors (`material_overdue`, once
+per order per day); idle/no-show alerts older than 24h still unresolved → Owners
+(`escalation_idle` / `escalation_no_show`). Idempotent via `escalationKey` in
+metadata. Set `DISABLE_ESCALATION=true` to skip the timer (tests call
+`runEscalationCheck()` directly).
+
 ---
 
 ## Owner (Owner only)
@@ -275,6 +292,11 @@ Returns a full map of `NotificationType` → boolean; types the user never set c
 Body: `{ "preferences": { "no_show": false } }` — merged into the saved map.
 Unknown notification types are rejected with 400.
 
+### PATCH /api/users/me/fcm-token — **Any authenticated role**
+Body: `{ "fcmToken": "<device-token>" }` or `{ "fcmToken": null }` to clear.
+Response: `{ "success": true, "data": { "fcmToken": "..." | null } }`.
+This is the endpoint the mobile app calls from `lib/pushNotifications.ts`.
+
 ---
 
 ## Middleware Chain (Order Matters)
@@ -298,3 +320,16 @@ Request → helmet → cors → json → rate-limit → route-specific:
 /api/payments/*       → authenticate  → moneyFilter → paymentRoutes (router-level Accountant/Owner guard)
 /api/accountant/*     → authenticate  → moneyFilter → accountantRoutes (router-level Accountant/Owner guard)
 ```
+
+---
+
+## Environment (notifications)
+
+Optional. Without Firebase credentials the API still runs; in-app notifications
+are created, FCM pushes are no-ops.
+
+| Variable | Purpose |
+|----------|---------|
+| `FIREBASE_SERVICE_ACCOUNT_PATH` | Path to service-account JSON (preferred) |
+| `GOOGLE_APPLICATION_CREDENTIALS` | ADC fallback if the explicit path is unset |
+| `DISABLE_ESCALATION` | `true` skips the hourly escalation loop (use in tests) |

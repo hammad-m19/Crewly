@@ -1,7 +1,7 @@
 # Crewly — Project Progress Tracker
 
 > Construction Company Management App — Offline-first mobile + backend
-> Last updated: 2026-08-12 (Phase 7 complete)
+> Last updated: 2026-08-12 (Phases 8–9 complete)
 
 ---
 
@@ -220,26 +220,43 @@
 ---
 
 ## Phase 8: Notifications (FCM Push)
-> **Status: 🔲 NOT STARTED**
+> **Status: ✅ COMPLETE**
 
-- [ ] `src/config/firebase.ts` — FCM admin SDK
-- [ ] Notification creation service (no-show, idle, overdue orders)
-- [ ] Escalation engine: 24h cron → Owner notification
-- [ ] Mobile FCM registration + permission handling
-- [ ] In-app notification feed (all roles)
+### Backend
+- [x] `src/config/firebase.ts` — optional Firebase Admin; no-op without `FIREBASE_SERVICE_ACCOUNT_PATH` / `GOOGLE_APPLICATION_CREDENTIALS`
+- [x] `src/services/notify.ts` — in-app `Notification` + FCM push when Firebase is configured **and** `notificationPrefs` allow the type
+- [x] `src/services/escalation.ts` — hourly job: material overdue → Super Supervisors; 24h idle/no-show → Owners; idempotent `escalationKey`s; `DISABLE_ESCALATION=true` skips the loop
+- [x] `server.ts` — `initFirebase()` + `startEscalationEngine()` after DB connect
+- [x] `PATCH /users/me/fcm-token` — store or clear the device token (`POST /auth/fcm-token` also exists)
+- [x] `dailyReports.ts` — no-show / idle → `notifyRole(SUPER_SUPERVISOR)` (idempotent within 24h)
+- [x] `coordination.ts` — team assigned → `notify()` Site Supervisor
+- [x] `.env.example` — Firebase paths + `DISABLE_ESCALATION`
+- [x] Integration test (`test-notifications.ts`) — 11/11 passed
+
+### Mobile
+- [x] `lib/pushNotifications.ts` — permission + device token; `PATCH /users/me/fcm-token` (best-effort; simulators skip)
+- [x] `components/NotificationsFeed.tsx` — shared in-app feed (mark-read, pull-to-refresh)
+- [x] Notification screens for all roles: `(site)`, `(super)`, `(owner)`, `(accountant)` — Super refactored onto the shared feed
+- [x] Root `_layout.tsx` registers for push after auth
 
 ---
 
 ## Phase 9: Polish & Production Readiness
-> **Status: 🔲 NOT STARTED**
+> **Status: ✅ COMPLETE**
 
-- [ ] Photo compression (resize 1200px, JPEG 80%)
-- [ ] Offline indicators throughout UI
-- [ ] Error handling + retry logic
-- [ ] Loading/empty/skeleton states
-- [ ] App icon + splash screen
-- [ ] EAS Build config (Android/iOS)
-- [ ] Network connectivity hook (`useConnectivity`)
+- [x] Photo compression — `expo-image-manipulator`, max 1200px long edge, JPEG 0.8
+- [x] `photoSync.ts` — `expo-file-system/legacy` multipart upload; AsyncStorage persistence across restarts
+- [x] `hooks/useConnectivity.ts` — reads `syncStore` (no second NetInfo listener)
+- [x] Global offline banner in `app/_layout.tsx`
+- [x] GET retry with exponential backoff in `lib/api.ts` (3 attempts, 400ms base, network errors only)
+- [x] `ErrorState` / `EmptyState` / `LoadingSkeleton` on daily-report, live-board, owner dashboard, accountant payment-queue
+- [x] `eas.json` — development / preview / production profiles
+- [x] Packages: `expo-image-manipulator`, `@react-native-async-storage/async-storage`
+- [x] Mobile `tsc --noEmit` clean
+
+Leftovers (not blocking phase close):
+- App icon + splash still use Expo placeholder assets in `app.json`
+- Real FCM delivery needs Firebase credentials on the API **and** a physical device / EAS build (Expo Go / simulators skip or are limited)
 
 ---
 
@@ -254,5 +271,7 @@
 | **5** | Super Supervisor: live board, coordination, verification | ✅ Done |
 | **6** | Owner: project management, dashboard, drill-down | ✅ Done |
 | **7** | Accountant: payment queue, reconciliation, cost reports | ✅ Done |
-| **8** | Push notifications (FCM) | 🔲 **Next** |
-| **9** | Polish: compression, offline UX, error handling, build | 🔲 Pending |
+| **8** | Push notifications (FCM) | ✅ Done |
+| **9** | Polish: compression, offline UX, error handling, build | ✅ Done |
+
+All planned phases (1–9) are complete. Remaining polish: branded icon/splash, and wiring real FCM on a physical device.
