@@ -85,7 +85,7 @@ router.get('/assignments', async (req: AuthRequest, res: Response): Promise<void
     if (teamId) filter.teamId = teamId;
 
     const assignments = await TeamSiteAssignment.find(filter)
-      .populate('teamId', 'name trade')
+      .populate('teamId', 'name trade contactPhone')
       .populate('projectId', 'name location')
       .lean();
     res.json({ success: true, data: assignments });

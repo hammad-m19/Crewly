@@ -19,7 +19,7 @@ export default function Index() {
     case 'super_supervisor':
       return <Redirect href="/(super)/live-board" />;
     case 'site_supervisor':
-      return <Redirect href="/(site)/daily-report" />;
+      return <Redirect href="/(site)/morning-checkin" />;
     case 'accountant':
       return <Redirect href="/(accountant)/payment-queue" />;
     default:

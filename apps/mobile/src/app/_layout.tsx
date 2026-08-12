@@ -110,7 +110,7 @@ function getRoleRoute(role: string): string {
     case 'super_supervisor':
       return '/(super)/live-board';
     case 'site_supervisor':
-      return '/(site)/daily-report';
+      return '/(site)/morning-checkin';
     case 'accountant':
       return '/(accountant)/payment-queue';
     default:

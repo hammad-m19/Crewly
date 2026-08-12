@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import { AttendanceStatus, IdleReason, SyncStatus } from '@crewly/shared';
+import { AttendanceStatus, IdleReason, MorningPresence, SyncStatus } from '@crewly/shared';
 
 /** A single team's entry in a daily report */
 export interface ITeamEntry {
@@ -14,6 +14,10 @@ export interface ITeamEntry {
   taskCompleted: boolean;
   remainingWorkNotes: string;
   photos: string[];
+  morningPresence: MorningPresence | null;
+  morningHeadcount: number;
+  morningNotes: string;
+  morningCheckedAt: string | null;
 }
 
 export interface IDailyReport extends Document {
@@ -48,6 +52,14 @@ const teamEntrySchema = new Schema(
     taskCompleted: { type: Boolean, default: false },
     remainingWorkNotes: { type: String, default: '' },
     photos: { type: [String], default: [] },
+    morningPresence: {
+      type: String,
+      enum: [...Object.values(MorningPresence), null],
+      default: null,
+    },
+    morningHeadcount: { type: Number, default: 0, min: 0 },
+    morningNotes: { type: String, default: '' },
+    morningCheckedAt: { type: String, default: null },
   },
   { _id: false }
 );
@@ -62,18 +74,16 @@ const dailyReportSchema = new Schema<IDailyReport>(
       default: [],
       validate: {
         validator: function (entries: ITeamEntry[]) {
-          // Validate: if a team has a no_show or idle status, idle reason must be provided
+          // End-of-day no-show must include an idle reason.
+          // Morning-only stubs (headcount 0 before EOD attendance) are allowed.
           return entries.every((entry) => {
-            if (
-              entry.attendanceStatus === AttendanceStatus.NO_SHOW ||
-              entry.headcountPresent === 0
-            ) {
+            if (entry.attendanceStatus === AttendanceStatus.NO_SHOW) {
               return entry.idleReason !== null;
             }
             return true;
           });
         },
-        message: 'Idle reason is required when team is not working or has a no-show',
+        message: 'Idle reason is required when a team is marked no-show for the day',
       },
     },
     syncStatus: {
