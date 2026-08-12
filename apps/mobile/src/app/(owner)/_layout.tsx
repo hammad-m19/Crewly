@@ -52,8 +52,12 @@ export default function OwnerLayout() {
       />
       <Tabs.Screen name="users" options={{ href: null, title: 'Manage Users' }} />
       <Tabs.Screen
+        name="notifications"
+        options={{ href: null, title: 'Alerts' }}
+      />
+      <Tabs.Screen
         name="notification-prefs"
-        options={{ href: null, title: 'Notifications' }}
+        options={{ href: null, title: 'Notification Preferences' }}
       />
     </Tabs>
   );

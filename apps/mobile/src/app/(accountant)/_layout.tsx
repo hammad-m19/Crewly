@@ -37,6 +37,10 @@ export default function AccountantLayout() {
         title: 'Reports',
         tabBarIcon: ({ color }) => <TabIcon emoji="📈" color={color} />,
       }} />
+      <Tabs.Screen name="notifications" options={{
+        title: 'Alerts',
+        tabBarIcon: ({ color }) => <TabIcon emoji="🔔" color={color} />,
+      }} />
     </Tabs>
   );
 }

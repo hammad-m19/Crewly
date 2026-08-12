@@ -5,10 +5,12 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useAuthStore } from '../../store/authStore';
-import { useSyncStore } from '../../store/syncStore';
 import { apiFetch } from '../../lib/api';
 import { formatMoney, formatMoneyCompact } from '../../lib/format';
 import ProgressBar, { statusColor } from '../../components/ui/ProgressBar';
+import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
+import ErrorState from '../../components/ui/ErrorState';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface ProjectSummary {
   projectId: string;
@@ -53,7 +55,6 @@ interface DashboardData {
 export default function OwnerDashboard() {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
-  const { isOnline } = useSyncStore();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,8 +83,16 @@ export default function OwnerDashboard() {
 
   if (loading && !data) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <Text style={styles.loadingText}>Loading company overview…</Text>
+      <View style={styles.container}>
+        <LoadingSkeleton rows={7} />
+      </View>
+    );
+  }
+
+  if (!data && error) {
+    return (
+      <View style={styles.container}>
+        <ErrorState message={error} onRetry={() => fetchDashboard(true)} />
       </View>
     );
   }
@@ -106,14 +115,6 @@ export default function OwnerDashboard() {
         />
       }
     >
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineBannerText}>
-            📡 You're offline. Figures may be out of date.
-          </Text>
-        </View>
-      )}
-
       <View style={styles.welcomeSection}>
         <Text style={styles.greeting}>Welcome back,</Text>
         <Text style={styles.userName}>{user?.name || 'Owner'}</Text>
@@ -125,9 +126,12 @@ export default function OwnerDashboard() {
       </View>
 
       {error && (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
+        <ErrorState
+          title="Could not refresh"
+          message={error}
+          onRetry={() => fetchDashboard(true)}
+          style={styles.inlineError}
+        />
       )}
 
       <View style={styles.statsGrid}>
@@ -220,19 +224,12 @@ export default function OwnerDashboard() {
       </View>
 
       {projects.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyTitle}>No projects yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Create your first project to start tracking costs and crews.
-          </Text>
-          <TouchableOpacity
-            style={styles.emptyButton}
-            onPress={() => router.push('/(owner)/projects')}
-          >
-            <Text style={styles.emptyButtonText}>+ Create Project</Text>
-          </TouchableOpacity>
-        </View>
+        <EmptyState
+          title="No projects yet"
+          message="Create your first project to start tracking costs and crews."
+          actionLabel="+ Create Project"
+          onAction={() => router.push('/(owner)/projects')}
+        />
       ) : (
         <>
           {activeProjects.map((project) => (
@@ -382,31 +379,15 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background.primary,
   },
-  centerContent: { justifyContent: 'center', alignItems: 'center' },
-  loadingText: { ...typography.body, color: colors.text.tertiary },
   content: {
     padding: spacing.lg,
     paddingBottom: spacing['4xl'],
   },
-  offlineBanner: {
-    backgroundColor: colors.warning.light,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
+  inlineError: {
+    flex: 0,
+    paddingVertical: spacing.lg,
     marginBottom: spacing.lg,
   },
-  offlineBannerText: {
-    ...typography.bodySmall,
-    color: colors.warning.dark,
-    textAlign: 'center',
-  },
-  errorBanner: {
-    backgroundColor: colors.danger.light,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
-  },
-  errorText: { ...typography.bodySmall, color: colors.danger.dark, textAlign: 'center' },
   welcomeSection: {
     marginBottom: spacing['2xl'],
   },
@@ -463,36 +444,6 @@ const styles = StyleSheet.create({
     ...typography.label,
     color: colors.primary[500],
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: spacing['4xl'],
-    paddingHorizontal: spacing.lg,
-    backgroundColor: colors.background.card,
-    borderRadius: borderRadius.lg,
-    ...shadows.sm,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.lg,
-  },
-  emptyTitle: {
-    ...typography.heading4,
-    color: colors.text.primary,
-    marginBottom: spacing.xs,
-  },
-  emptySubtitle: {
-    ...typography.bodySmall,
-    color: colors.text.tertiary,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    marginTop: spacing.xl,
-    backgroundColor: colors.role.owner,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing['2xl'],
-    borderRadius: borderRadius.md,
-  },
-  emptyButtonText: { ...typography.button, color: colors.text.inverse },
 });
 
 const budgetStyles = StyleSheet.create({

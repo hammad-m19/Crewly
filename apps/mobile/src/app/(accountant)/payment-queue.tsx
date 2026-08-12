@@ -19,6 +19,9 @@ import { apiFetch } from '../../lib/api';
 import { formatMoney, formatDate, humanize, todayIso, isValidDateInput } from '../../lib/format';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
+import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
+import ErrorState from '../../components/ui/ErrorState';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface WageItem {
   dailyReportId: string;
@@ -158,12 +161,18 @@ export default function PaymentQueue() {
     }
   };
 
+  if (!data && loadError) {
+    return (
+      <View style={styles.container}>
+        <ErrorState message={loadError} onRetry={() => fetchQueue(true)} />
+      </View>
+    );
+  }
+
   if (!data) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <Text style={loadError ? styles.errorText : styles.loadingText}>
-          {loadError || 'Loading payment queue…'}
-        </Text>
+      <View style={styles.container}>
+        <LoadingSkeleton rows={6} />
       </View>
     );
   }
@@ -178,16 +187,24 @@ export default function PaymentQueue() {
           <RefreshControl refreshing={refreshing} onRefresh={() => fetchQueue(true)} />
         }
       >
-        <Text style={styles.intro}>
-          {totalPending === 0
-            ? `Nothing awaiting payment in the last ${data.lookbackDays} days.`
-            : `${totalPending} item${totalPending === 1 ? '' : 's'} awaiting payment from the last ${data.lookbackDays} days.`}
-        </Text>
+        {totalPending === 0 ? (
+          <EmptyState
+            title="Queue clear"
+            message={`Nothing awaiting payment in the last ${data.lookbackDays} days.`}
+          />
+        ) : (
+          <Text style={styles.intro}>
+            {`${totalPending} item${totalPending === 1 ? '' : 's'} awaiting payment from the last ${data.lookbackDays} days.`}
+          </Text>
+        )}
 
         {loadError && (
-          <View style={styles.errorBanner}>
-            <Text style={styles.errorBannerText}>{loadError}</Text>
-          </View>
+          <ErrorState
+            title="Could not refresh"
+            message={loadError}
+            onRetry={() => fetchQueue(true)}
+            style={styles.inlineError}
+          />
         )}
 
         <Section emoji="👷" title="Daily Wages Due" count={data.counts.dailyWages}>
@@ -398,18 +415,13 @@ function QueueRow({
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.primary },
-  centerContent: { justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
   content: { padding: spacing.lg, paddingBottom: spacing['4xl'] },
-  loadingText: { ...typography.body, color: colors.text.tertiary },
-  errorText: { ...typography.body, color: colors.danger.dark, textAlign: 'center' },
   intro: { ...typography.bodySmall, color: colors.text.tertiary, marginBottom: spacing.lg },
-  errorBanner: {
-    backgroundColor: colors.danger.light,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
+  inlineError: {
+    flex: 0,
+    paddingVertical: spacing.lg,
     marginBottom: spacing.lg,
   },
-  errorBannerText: { ...typography.bodySmall, color: colors.danger.dark, textAlign: 'center' },
 });
 
 const sectionStyles = StyleSheet.create({
