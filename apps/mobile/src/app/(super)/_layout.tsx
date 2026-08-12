@@ -1,13 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { useRoleTabScreenOptions } from '../../theme/navigation';
+import { useRoleTabNavigator } from '../../theme/navigation';
 
 export default function SuperSupervisorLayout() {
-  const screenOptions = useRoleTabScreenOptions(colors.role.super_supervisor);
+  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.super_supervisor);
 
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
       <Tabs.Screen name="live-board" options={{
         title: 'Live Board',
         headerTitle: 'All Sites',
@@ -24,6 +24,11 @@ export default function SuperSupervisorLayout() {
       <Tabs.Screen name="notifications" options={{
         title: 'Alerts',
         tabBarIcon: ({ color }) => <TabIcon emoji="🔔" color={color} />,
+      }} />
+      <Tabs.Screen name="profile" options={{
+        title: 'Profile',
+        headerTitle: 'Profile',
+        tabBarIcon: ({ color }) => <TabIcon emoji="👤" color={color} />,
       }} />
     </Tabs>
   );

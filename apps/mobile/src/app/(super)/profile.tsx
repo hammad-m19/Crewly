@@ -2,18 +2,18 @@ import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 import ProfileScreen from '../../components/ProfileScreen';
 
-export default function SiteProfile() {
+export default function SuperProfile() {
   const router = useRouter();
 
   return (
     <ProfileScreen
-      roleLabel="Site Supervisor"
-      roleColor={colors.role.site_supervisor}
+      roleLabel="Super Supervisor"
+      roleColor={colors.role.super_supervisor}
       extraLinks={[
         {
           label: 'Alerts',
           emoji: '🔔',
-          onPress: () => router.push('/(site)/notifications' as any),
+          onPress: () => router.push('/(super)/notifications' as any),
         },
       ]}
     />
