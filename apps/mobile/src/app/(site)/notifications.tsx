@@ -2,20 +2,16 @@ import { NotificationsFeed, NotificationItem } from '../../components/Notificati
 import { useRouter } from 'expo-router';
 import { colors } from '../../theme/colors';
 
-export default function SuperNotificationsScreen() {
+export default function SiteNotificationsScreen() {
   const router = useRouter();
 
   const onNavigate = (notification: NotificationItem) => {
     switch (notification.type) {
-      case 'no_show':
-      case 'idle_team':
-      case 'escalation_idle':
-      case 'escalation_no_show':
-      case 'material_overdue':
-        router.push('/(super)/live-board');
-        break;
       case 'team_assigned':
-        router.push('/(super)/coordinate');
+        router.push('/(site)/daily-report');
+        break;
+      case 'material_overdue':
+        router.push('/(site)/materials');
         break;
       default:
         break;
@@ -24,7 +20,7 @@ export default function SuperNotificationsScreen() {
 
   return (
     <NotificationsFeed
-      accentColor={colors.role.super_supervisor}
+      accentColor={colors.role.site_supervisor}
       onNavigate={onNavigate}
     />
   );

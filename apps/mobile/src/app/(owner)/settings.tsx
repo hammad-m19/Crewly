@@ -40,8 +40,13 @@ export default function OwnerSettings() {
           onPress={() => router.push('/(owner)/users')}
         />
         <SettingItem
-          label="Notification Preferences"
+          label="Alerts"
           emoji="🔔"
+          onPress={() => router.push('/(owner)/notifications' as any)}
+        />
+        <SettingItem
+          label="Notification Preferences"
+          emoji="⚙️"
           onPress={() => router.push('/(owner)/notification-prefs')}
         />
         <SettingItem label="App Version" emoji="ℹ️" value="1.0.0" />

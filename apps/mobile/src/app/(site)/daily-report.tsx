@@ -13,11 +13,13 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useSyncStore } from '../../store/syncStore';
-import { useAuthStore } from '../../store/authStore';
 import { AttendanceStatus, IdleReason, TeamEntry } from '@crewly/shared';
 import Badge from '../../components/ui/Badge';
 import StatusChip from '../../components/ui/StatusChip';
 import Button from '../../components/ui/Button';
+import EmptyState from '../../components/ui/EmptyState';
+import ErrorState from '../../components/ui/ErrorState';
+import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
 
 /**
  * Daily Report form — the primary screen for Site Supervisors.
@@ -62,14 +64,16 @@ interface TeamReportEntry {
 }
 
 export default function DailyReportForm() {
-  const { isOnline } = useSyncStore();
-  const user = useAuthStore((s) => s.user);
+  const { isOnline, lastError } = useSyncStore();
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
   });
   const todayISO = new Date().toISOString().split('T')[0];
+
+  // Landing load gate — reserved for WatermelonDB assignment fetch
+  const [teamsLoading] = useState(false);
 
   // Initialize team entries
   const [entries, setEntries] = useState<TeamReportEntry[]>(
@@ -156,17 +160,35 @@ export default function DailyReportForm() {
     setIsDraft(false);
   };
 
+  if (teamsLoading) {
+    return (
+      <View style={styles.container}>
+        <LoadingSkeleton rows={5} />
+      </View>
+    );
+  }
+
+  if (lastError && entries.length === 0) {
+    return (
+      <View style={styles.container}>
+        <ErrorState message={lastError} />
+      </View>
+    );
+  }
+
+  if (entries.length === 0) {
+    return (
+      <View style={styles.container}>
+        <EmptyState
+          title="No teams assigned"
+          message="Ask a Super Supervisor to assign teams to this site before filing today's report."
+        />
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Offline Banner */}
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineText}>
-            📡 Working offline — changes will sync when connected
-          </Text>
-        </View>
-      )}
-
       {/* Date & Status Header */}
       <View style={styles.header}>
         <View>
@@ -451,16 +473,6 @@ function IdleReasonModal({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.primary },
   content: { padding: spacing.lg, paddingBottom: spacing['6xl'] },
-  offlineBanner: {
-    backgroundColor: colors.sync.pending + '20',
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
-    borderWidth: 1,
-    borderColor: colors.sync.pending + '40',
-  },
-  offlineText: { ...typography.bodySmall, color: colors.warning.dark, textAlign: 'center' },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',

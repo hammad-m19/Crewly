@@ -4,8 +4,10 @@ import { useFocusEffect } from 'expo-router';
 import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
-import { useSyncStore } from '../../store/syncStore';
 import { apiFetch } from '../../lib/api';
+import LoadingSkeleton from '../../components/ui/LoadingSkeleton';
+import ErrorState from '../../components/ui/ErrorState';
+import EmptyState from '../../components/ui/EmptyState';
 
 interface TeamStatus {
   assignmentId: string;
@@ -41,10 +43,10 @@ interface OverviewData {
 const AUTO_REFRESH_INTERVAL = 30_000; // 30 seconds
 
 export default function LiveBoard() {
-  const { isOnline, lastSyncAt } = useSyncStore();
   const [data, setData] = useState<OverviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [lastFetched, setLastFetched] = useState<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,9 +59,13 @@ export default function LiveBoard() {
       if (result.success && result.data) {
         setData(result.data);
         setLastFetched(Date.now());
+        setError(null);
+      } else {
+        setError(result.error?.message || 'Could not load live board.');
       }
     } catch (e) {
       console.error('Failed to fetch overview:', e);
+      setError('Could not load live board.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -108,8 +114,16 @@ export default function LiveBoard() {
 
   if (loading && !data) {
     return (
-      <View style={[styles.container, styles.centerContent]}>
-        <Text style={styles.loadingText}>Loading cross-site data…</Text>
+      <View style={styles.container}>
+        <LoadingSkeleton rows={6} />
+      </View>
+    );
+  }
+
+  if (!data && error) {
+    return (
+      <View style={styles.container}>
+        <ErrorState message={error} onRetry={() => fetchOverview(true)} />
       </View>
     );
   }
@@ -126,14 +140,6 @@ export default function LiveBoard() {
         />
       }
     >
-      {!isOnline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineBannerText}>
-            📡 Offline — showing last synced data
-          </Text>
-        </View>
-      )}
-
       <View style={styles.header}>
         <Text style={styles.title}>Cross-Site Overview</Text>
         {lastFetched && (
@@ -153,13 +159,10 @@ export default function LiveBoard() {
 
       {/* Project cards */}
       {projects.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyTitle}>No Active Projects</Text>
-          <Text style={styles.emptySubtitle}>
-            Active projects with assigned teams will appear here.
-          </Text>
-        </View>
+        <EmptyState
+          title="No Active Projects"
+          message="Active projects with assigned teams will appear here."
+        />
       ) : (
         projects.map(project => (
           <ProjectCard
@@ -310,25 +313,11 @@ function MiniPill({ label, color }: { label: string; color: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background.primary },
-  centerContent: { justifyContent: 'center', alignItems: 'center' },
-  loadingText: { ...typography.body, color: colors.text.tertiary },
   content: { padding: spacing.lg, paddingBottom: spacing['4xl'] },
-  offlineBanner: {
-    backgroundColor: colors.warning.light, paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.lg, borderRadius: borderRadius.md, marginBottom: spacing.lg,
-  },
-  offlineBannerText: { ...typography.bodySmall, color: colors.warning.dark, textAlign: 'center' },
   header: { marginBottom: spacing.lg },
   title: { ...typography.heading3, color: colors.text.primary },
   syncText: { ...typography.caption, color: colors.text.tertiary, marginTop: spacing.xxs },
   statusBar: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing['2xl'] },
-  emptyState: {
-    alignItems: 'center', paddingVertical: spacing['4xl'],
-    backgroundColor: colors.background.card, borderRadius: borderRadius.lg, ...shadows.sm,
-  },
-  emptyEmoji: { fontSize: 48, marginBottom: spacing.lg },
-  emptyTitle: { ...typography.heading4, color: colors.text.primary, marginBottom: spacing.xs },
-  emptySubtitle: { ...typography.bodySmall, color: colors.text.tertiary, textAlign: 'center', paddingHorizontal: spacing.lg },
 });
 
 const pillStyles = StyleSheet.create({

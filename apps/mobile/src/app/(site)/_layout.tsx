@@ -41,6 +41,13 @@ export default function SiteSupervisorLayout() {
         tabBarIcon: ({ color }) => <TabIcon emoji="🔄" color={color} />,
         tabBarBadge: pendingCount > 0 ? pendingCount : undefined,
       }} />
+      <Tabs.Screen name="notifications" options={{
+        title: 'Alerts',
+        tabBarIcon: ({ color }) => <TabIcon emoji="🔔" color={color} />,
+      }} />
+      {/* Form screens — reachable by navigation, not shown in the tab bar */}
+      <Tabs.Screen name="material-order" options={{ href: null, title: 'New Order' }} />
+      <Tabs.Screen name="material-purchase" options={{ href: null, title: 'New Purchase' }} />
     </Tabs>
   );
 }
