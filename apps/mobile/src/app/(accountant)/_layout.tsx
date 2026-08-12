@@ -1,13 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { useRoleTabScreenOptions } from '../../theme/navigation';
+import { useRoleTabNavigator } from '../../theme/navigation';
 
 export default function AccountantLayout() {
-  const screenOptions = useRoleTabScreenOptions(colors.role.accountant);
+  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.accountant);
 
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
       <Tabs.Screen name="payment-queue" options={{
         title: 'Payments',
         headerTitle: 'Payment Queue',
@@ -25,10 +25,12 @@ export default function AccountantLayout() {
         title: 'Reports',
         tabBarIcon: ({ color }) => <TabIcon emoji="📈" color={color} />,
       }} />
-      <Tabs.Screen name="notifications" options={{
-        title: 'Alerts',
-        tabBarIcon: ({ color }) => <TabIcon emoji="🔔" color={color} />,
+      <Tabs.Screen name="profile" options={{
+        title: 'Profile',
+        headerTitle: 'Profile',
+        tabBarIcon: ({ color }) => <TabIcon emoji="👤" color={color} />,
       }} />
+      <Tabs.Screen name="notifications" options={{ href: null, title: 'Alerts' }} />
     </Tabs>
   );
 }

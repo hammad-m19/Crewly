@@ -1,15 +1,15 @@
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { useRoleTabScreenOptions } from '../../theme/navigation';
+import { useRoleTabNavigator } from '../../theme/navigation';
 import { useSyncStore } from '../../store/syncStore';
 
 export default function SiteSupervisorLayout() {
   const pendingCount = useSyncStore((s) => s.pendingChangesCount);
-  const screenOptions = useRoleTabScreenOptions(colors.role.site_supervisor);
+  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.site_supervisor);
 
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
       <Tabs.Screen name="daily-report" options={{
         title: 'Report',
         headerTitle: "Today's Report",
@@ -33,7 +33,6 @@ export default function SiteSupervisorLayout() {
         headerTitle: 'Profile',
         tabBarIcon: ({ color }) => <TabIcon emoji="👤" color={color} />,
       }} />
-      {/* Reachable by navigation, not shown in the tab bar */}
       <Tabs.Screen name="notifications" options={{ href: null, title: 'Alerts' }} />
       <Tabs.Screen name="material-order" options={{ href: null, title: 'New Order' }} />
       <Tabs.Screen name="material-purchase" options={{ href: null, title: 'New Purchase' }} />

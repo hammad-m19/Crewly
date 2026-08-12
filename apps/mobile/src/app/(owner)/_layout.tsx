@@ -1,13 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { useRoleTabScreenOptions } from '../../theme/navigation';
+import { useRoleTabNavigator } from '../../theme/navigation';
 
 export default function OwnerLayout() {
-  const screenOptions = useRoleTabScreenOptions(colors.role.owner);
+  const { safeAreaInsets, screenOptions } = useRoleTabNavigator(colors.role.owner);
 
   return (
-    <Tabs screenOptions={screenOptions}>
+    <Tabs safeAreaInsets={safeAreaInsets} screenOptions={screenOptions}>
       <Tabs.Screen
         name="dashboard"
         options={{
@@ -31,7 +31,6 @@ export default function OwnerLayout() {
         }}
       />
 
-      {/* Detail screens — reachable by navigation, not shown in the tab bar */}
       <Tabs.Screen
         name="project-detail"
         options={{ href: null, title: 'Project Costs' }}
