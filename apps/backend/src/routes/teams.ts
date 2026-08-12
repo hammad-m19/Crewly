@@ -35,6 +35,47 @@ router.post('/', requireRole(Role.OWNER), async (req: AuthRequest, res: Response
   }
 });
 
+/**
+ * PATCH /api/teams/:id — Owner manages team details; Accountant can also
+ * update the daily rate used for wage suggestions.
+ */
+router.patch('/:id', requireRole(Role.OWNER, Role.ACCOUNTANT),
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const team = await Team.findById(req.params.id);
+      if (!team || team._deleted) {
+        res.status(404).json({ success: false, error: { message: 'Team not found.' } });
+        return;
+      }
+
+      const { name, trade, defaultPaymentType, contactPhone, isActive, dailyRate } = req.body;
+
+      if (dailyRate !== undefined) {
+        if (dailyRate !== null && (typeof dailyRate !== 'number' || dailyRate < 0)) {
+          res.status(400).json({ success: false, error: { message: 'dailyRate must be a positive number or null.' } });
+          return;
+        }
+        team.dailyRate = dailyRate;
+      }
+
+      // Non-financial fields are Owner-only.
+      if (req.user!.role === Role.OWNER) {
+        if (name !== undefined) team.name = name;
+        if (trade !== undefined) team.trade = trade;
+        if (defaultPaymentType !== undefined) team.defaultPaymentType = defaultPaymentType;
+        if (contactPhone !== undefined) team.contactPhone = contactPhone;
+        if (isActive !== undefined) team.isActive = Boolean(isActive);
+      }
+
+      await team.save();
+      res.json({ success: true, data: team.toObject() });
+    } catch (error) {
+      console.error('Update team error:', error);
+      res.status(500).json({ success: false, error: { message: 'Internal server error.' } });
+    }
+  }
+);
+
 /** GET /api/teams/assignments?projectId=X — get team assignments for a project */
 router.get('/assignments', async (req: AuthRequest, res: Response): Promise<void> => {
   try {

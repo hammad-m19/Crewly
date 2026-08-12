@@ -11,45 +11,24 @@ import { Payment } from '../models/Payment';
 import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/roleGuard';
+import { Role, BudgetCategory, MaterialOrderStatus, ProjectStatus } from '@crewly/shared';
 import {
-  Role,
-  BudgetCategory,
-  PaymentRecordType,
-  MaterialOrderStatus,
-  ProjectStatus,
-} from '@crewly/shared';
+  BUDGET_CATEGORIES,
+  LABOR_PAYMENT_TYPES,
+  buildSpendMaps,
+  sumBudget,
+  toId,
+} from '../lib/costs';
 
 const router = Router();
 
 /** Every route here is Owner-only. */
 router.use(requireRole(Role.OWNER));
 
-/** Budget categories only — `byTrade` is a nested breakdown, not a spend bucket. */
-const BUDGET_CATEGORIES = Object.values(BudgetCategory);
-
-/** Payment types that represent labor cost (petty cash top-ups are tracked separately). */
-const LABOR_PAYMENT_TYPES: string[] = [
-  PaymentRecordType.DAILY_WAGE,
-  PaymentRecordType.MILESTONE,
-  PaymentRecordType.LUMP_SUM_INSTALLMENT,
-];
-
 const RECEIVED_STATUSES: string[] = [
   MaterialOrderStatus.RECEIVED_FULL,
   MaterialOrderStatus.RECEIVED_PARTIAL,
 ];
-
-function sumBudget(budget: Record<string, unknown> | undefined | null): number {
-  if (!budget) return 0;
-  return BUDGET_CATEGORIES.reduce((total, category) => {
-    const value = budget[category];
-    return total + (typeof value === 'number' ? value : 0);
-  }, 0);
-}
-
-function toId(value: unknown): string {
-  return value ? String((value as { _id?: unknown })._id ?? value) : '';
-}
 
 /**
  * GET /api/owner/dashboard
@@ -88,27 +67,11 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
       verifications.map((v: any) => `${toId(v.dailyReportId)}_${v.teamEntryIndex}`)
     );
 
-    // Roll up spend per project in a single pass over each collection.
-    const laborByProject = new Map<string, number>();
-    const topUpByProject = new Map<string, number>();
-    for (const payment of payments) {
-      const pid = toId(payment.projectId);
-      const bucket = LABOR_PAYMENT_TYPES.includes(payment.type) ? laborByProject : topUpByProject;
-      bucket.set(pid, (bucket.get(pid) || 0) + payment.amount);
-    }
-
-    const materialsByProject = new Map<string, number>();
-    for (const purchase of purchases) {
-      const pid = toId(purchase.projectId);
-      materialsByProject.set(pid, (materialsByProject.get(pid) || 0) + purchase.amount);
-    }
-
-    const pettyCashByProject = new Map<string, number>();
-    for (const record of pettyCash) {
-      const pid = toId(record.projectId);
-      const spent = (record.expenses || []).reduce((sum, e) => sum + e.amount, 0);
-      pettyCashByProject.set(pid, (pettyCashByProject.get(pid) || 0) + spent);
-    }
+    const { laborByProject, materialsByProject, pettyCashByProject } = buildSpendMaps(
+      payments,
+      purchases,
+      pettyCash
+    );
 
     const teamCountByProject = new Map<string, number>();
     for (const assignment of assignments) {
