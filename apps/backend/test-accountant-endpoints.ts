@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import connectDB from './src/config/db';
+import { authConfig } from './src/config/auth';
 import { Project } from './src/models/Project';
 import { Team } from './src/models/Team';
 import { TeamSiteAssignment } from './src/models/TeamSiteAssignment';
@@ -10,7 +12,7 @@ import { MaterialPurchase } from './src/models/MaterialPurchase';
 import { PettyCash } from './src/models/PettyCash';
 import { DailyReport } from './src/models/DailyReport';
 import { TaskVerification } from './src/models/TaskVerification';
-import { AttendanceStatus, PaymentType, PaymentRecordType, Trade } from '@crewly/shared';
+import { AttendanceStatus, PaymentType, PaymentRecordType, Role, Trade } from '@crewly/shared';
 
 /**
  * Integration check for the Phase 7 Accountant endpoints.
@@ -77,14 +79,45 @@ async function request(
   return { status: res.status, body: await res.json() };
 }
 
+/** Remove anything a previous crashed run of THIS test left behind. */
+async function sweepLeftovers(): Promise<void> {
+  const stale = await Project.find({ name: 'Accountant Endpoint Verification Site' }).lean();
+  const pids = stale.map((p) => p._id);
+  if (pids.length > 0) {
+    const staleReports = await DailyReport.find({ projectId: { $in: pids } }).lean();
+    await TaskVerification.deleteMany({
+      dailyReportId: { $in: staleReports.map((r) => r._id) },
+    });
+    await Promise.all([
+      Payment.deleteMany({ projectId: { $in: pids } }),
+      PettyCash.deleteMany({ projectId: { $in: pids } }),
+      MaterialPurchase.deleteMany({ projectId: { $in: pids } }),
+      TeamSiteAssignment.deleteMany({ projectId: { $in: pids } }),
+      DailyReport.deleteMany({ projectId: { $in: pids } }),
+    ]);
+    await Project.deleteMany({ _id: { $in: pids } });
+  }
+  await Team.deleteMany({ name: { $regex: '^(Acct Test|AC ).*Crew' } });
+}
+
 async function run(): Promise<void> {
   await connectDB();
-
-  const siteUser = await User.findOne({ email: 'site@crewly.com' });
-  if (!siteUser) throw new Error('Seed data missing — run `npm run backend:seed` first.');
+  await sweepLeftovers();
 
   const today = new Date().toISOString().split('T')[0];
   const created: mongoose.Document[] = [];
+
+  // A dedicated supervisor so the test never depends on (or mutates) the
+  // shared seed accounts, whose passwords may have been changed.
+  const SITE_EMAIL = 'ac-test-site@crewly.test';
+  await User.deleteMany({ email: SITE_EMAIL }); // clear any leftover from a crashed run
+  const siteUser = await new User({
+    name: 'AC Test Supervisor',
+    email: SITE_EMAIL,
+    passwordHash: await bcrypt.hash('crewly2024', authConfig.saltRounds),
+    role: Role.SITE_SUPERVISOR,
+  }).save();
+  created.push(siteUser);
 
   // ---- Seed a project with all three payment terms ----
   const project = await new Project({
@@ -100,7 +133,7 @@ async function run(): Promise<void> {
   const wageTeam = await new Team({ name: 'AC Wage Crew', trade: Trade.ELECTRIC }).save();
   const milestoneTeam = await new Team({
     name: 'AC Milestone Crew',
-    trade: Trade.PLUMBING,
+    trade: Trade.PLUMBER,
     defaultPaymentType: PaymentType.MILESTONE,
   }).save();
   const lumpTeam = await new Team({
@@ -198,10 +231,11 @@ async function run(): Promise<void> {
   created.push(pettyBatch);
 
   const projectId = String(project._id);
-  const accountantToken = await login('accountant@crewly.com');
-  const siteToken = await login('site@crewly.com');
 
   try {
+    const accountantToken = await login('accountant@crewly.com');
+    const siteToken = await login(SITE_EMAIL);
+
     // ---- Team daily rate (Accountant may set it) ----
     const rateRes = await request('PATCH', `/teams/${wageTeam._id}`, accountantToken, {
       dailyRate: DAILY_RATE,

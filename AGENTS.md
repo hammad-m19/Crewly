@@ -242,21 +242,21 @@ Copy `apps/backend/.env.example` → `apps/backend/.env`. Key vars:
 | 4 | WatermelonDB sync engine (pull/push with role filtering + money stripping) |
 | 5 | Super Supervisor: live board, team coordination, task verification, notifications |
 | 6 | Owner: dashboard with budget vs. actual, project CRUD with budget history, cost drill-down, user management, notification preferences |
+| 7 | Accountant: payment queue (wages/milestones/lump-sums), purchases review, petty cash reconciliation, cost reports |
 
 Phase 6 added two backend routers (`routes/owner.ts`, `routes/users.ts`) plus three new
 mobile screens (`project-detail.tsx`, `users.tsx`, `notification-prefs.tsx`). Spend
 figures are always derived from `payments` / `material_purchases` / `petty_cash` — see
 `.agents/DATA_MODELS.md` → "Derived Values".
 
-### 🔲 Next Up: Phase 7 — Accountant Features
+Phase 7 added `routes/payments.ts` and `routes/accountant.ts` (both Accountant/Owner,
+mounted with `moneyFilter`), `Team.dailyRate` (money-gated, settable via
+`PATCH /teams/:id`), the shared spend helper `src/lib/costs.ts` (used by owner AND
+accountant routes — change it in one place), and built out all four
+`(accountant)/` screens against those endpoints. Integration test:
+`apps/backend/test-accountant-endpoints.ts` (needs the API + MongoDB running).
 
-**This is the immediate next task.** Placeholder screens exist. Build:
-1. **Payment Queue** (`(accountant)/payment-queue.tsx`): Daily wages from attendance, milestone payments, lump-sum scheduling
-2. **Purchases** (`(accountant)/purchases.tsx`): Material purchase list, flag missing receipts
-3. **Reconciliation** (`(accountant)/reconciliation.tsx`): Petty cash per supervisor
-4. **Cost Reports** (`(accountant)/cost-reports.tsx`): Per-project breakdown (labor vs. materials vs. budget)
-
-### 🔲 Phase 8 — Push Notifications (FCM)
+### 🔲 Next Up: Phase 8 — Push Notifications (FCM)
 
 Firebase Cloud Messaging integration. `firebase-admin` is already in backend dependencies but not configured.
 
@@ -276,9 +276,16 @@ Photo compression, offline UX indicators, error handling, skeleton states, app i
    The new API lives under `expo-file-system/legacy` (or needs rewriting to the current
    upload API). Slated for Phase 9 alongside making the photo queue persistent.
 
-3. **Accountant screens read money data (Phase 7):** Accountant is in
-   `MONEY_VISIBLE_ROLES`, so no money-filter changes are needed for Phase 7 — but
-   never widen that constant to add other roles.
+3. **Accountant screens read money data:** Accountant is in `MONEY_VISIBLE_ROLES`,
+   so the Phase 7 endpoints work without money-filter changes — but never widen
+   that constant to add other roles. Note `/api/teams` is now mounted WITH
+   `moneyFilter` because teams carry `dailyRate`; keep it that way.
+
+4. **Seed account passwords can drift:** the Owner user-management screen (and its
+   tests) can change seed passwords, and `seed.ts` skips existing users. Integration
+   tests therefore create their own throwaway supervisor accounts
+   (`*@crewly.test`) instead of logging in as `site@crewly.com`. If you need the
+   seed logins manually and they fail, reset via the Owner users screen.
 
 ---
 

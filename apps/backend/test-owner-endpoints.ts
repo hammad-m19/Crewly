@@ -1,6 +1,8 @@
 import 'dotenv/config';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
 import connectDB from './src/config/db';
+import { authConfig } from './src/config/auth';
 import { Project } from './src/models/Project';
 import { Team } from './src/models/Team';
 import { User } from './src/models/User';
@@ -13,6 +15,7 @@ import {
   IdleReason,
   PaymentRecordType,
   NotificationType,
+  Role,
 } from '@crewly/shared';
 
 /**
@@ -71,12 +74,22 @@ async function run(): Promise<void> {
   await connectDB();
 
   const owner = await User.findOne({ email: 'owner@crewly.com' });
-  const siteUser = await User.findOne({ email: 'site@crewly.com' });
   const team = await Team.findOne({ trade: 'electric' });
 
-  if (!owner || !siteUser || !team) {
+  if (!owner || !team) {
     throw new Error('Seed data missing — run `npm run backend:seed` first.');
   }
+
+  // A dedicated supervisor so the test never depends on the shared seed
+  // account, whose password may have been changed via the users screen.
+  const SITE_EMAIL = 'owner-test-site@crewly.test';
+  await User.deleteMany({ email: SITE_EMAIL });
+  const siteUser = await new User({
+    name: 'Owner Test Supervisor',
+    email: SITE_EMAIL,
+    passwordHash: await bcrypt.hash('crewly2024', authConfig.saltRounds),
+    role: Role.SITE_SUPERVISOR,
+  }).save();
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -89,7 +102,7 @@ async function run(): Promise<void> {
     siteSupervisorId: siteUser._id,
   }).save();
 
-  const created: mongoose.Document[] = [project];
+  const created: mongoose.Document[] = [siteUser, project];
 
   created.push(
     await new Payment({
@@ -278,7 +291,7 @@ async function run(): Promise<void> {
   });
 
   // ---- Role gating ----
-  const siteToken = await login('site@crewly.com');
+  const siteToken = await login(SITE_EMAIL);
   const siteDashboard = await get('/owner/dashboard', siteToken);
   check('Site Supervisor is refused the owner dashboard', siteDashboard.status === 403, siteDashboard.status);
   const siteUsers = await get('/users', siteToken);

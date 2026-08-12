@@ -45,6 +45,7 @@
 | `trade` | Trade enum | `electric`, `plumber`, `wood`, `masonry`, etc. |
 | `defaultPaymentType` | PaymentType | `daily_wage`, `milestone`, `lump_sum` |
 | `contactPhone` | string? | Team lead's phone |
+| `dailyRate` | number \| null | **Money-gated** (in `MONEY_FIELDS`). Per person per day; drives wage suggestions in the accountant payment queue. Backend-only — not in the mobile schema |
 | `isActive` | boolean | |
 | `created_at` / `updated_at` | number | |
 

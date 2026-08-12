@@ -1,7 +1,7 @@
 # Crewly — Project Progress Tracker
 
 > Construction Company Management App — Offline-first mobile + backend
-> Last updated: 2026-08-11 (Phase 6 complete)
+> Last updated: 2026-08-12 (Phase 7 complete)
 
 ---
 
@@ -179,23 +179,43 @@
 ---
 
 ## Phase 7: Accountant Features
-> **Status: 🔲 NOT STARTED — NEXT UP**
+> **Status: ✅ COMPLETE**
 
-### Mobile — Payment Queue
-- [ ] Daily wages: attendance data → computed wages
-- [ ] Milestone payments from completed tasks
-- [ ] Lump-sum installment scheduling
+### Backend
+- [x] `models/Team.ts` — added `dailyRate` (money-gated; already listed in `MONEY_FIELDS`)
+- [x] `routes/teams.ts` — `PATCH /teams/:id` (Owner manages details; Accountant may set `dailyRate`)
+- [x] `routes/payments.ts` — `GET /payments` + `POST /payments` (Accountant/Owner)
+  - [x] Duplicate guard: one payment per (report, team, type) → 409
+  - [x] Lump-sum guard: installments cannot exceed the assignment's `agreedTotal`
+- [x] `routes/accountant.ts` — aggregation endpoints (Accountant/Owner)
+  - [x] `GET /accountant/payment-queue` — unpaid wages (headcount × dailyRate, half for half-days),
+        verified-but-unpaid milestones, outstanding lump-sum balances (30-day report lookback)
+  - [x] `GET /accountant/purchases` — purchases with names resolved + missing-receipt/late/unverified counts
+  - [x] `GET /accountant/reconciliation` — petty cash batches per supervisor + float-form options
+  - [x] `GET /accountant/cost-reports` — per-project labor/materials/petty cash vs. budget
+- [x] `lib/costs.ts` — shared spend/budget helpers (used by both owner + accountant routes)
+- [x] `server.ts` — mounted `/api/payments` + `/api/accountant`; added missing `moneyFilter` to `/api/teams`
+- [x] Integration test (`test-accountant-endpoints.ts`) — 25 assertions, verified
 
-### Mobile — Purchases
-- [ ] All material purchases list
-- [ ] Flag missing receipts & late entries
+### Mobile — Payment Queue (`(accountant)/payment-queue.tsx`)
+- [x] Daily wages: attendance data → suggested amount (headcount × daily rate)
+- [x] Milestone payments from verified completed tasks
+- [x] Lump-sum installments with paid-so-far / remaining
+- [x] Record-payment sheet (amount prefilled, date, notes) with server-side duplicate/overpay guards
 
-### Mobile — Reconciliation
-- [ ] Petty cash per-supervisor view
-- [ ] Reconcile batches before new floats
+### Mobile — Purchases (`(accountant)/purchases.tsx`)
+- [x] All material purchases with project + purchaser names
+- [x] Filters: missing receipts, late entries, unverified
+- [x] One-tap verify per purchase
 
-### Mobile — Cost Reports
-- [ ] Per-project cost breakdown (labor vs. materials vs. budget)
+### Mobile — Reconciliation (`(accountant)/reconciliation.tsx`)
+- [x] Petty cash batches per supervisor (float, spent, balance, expandable expenses)
+- [x] Reconcile with confirmation; new float blocked until previous batch reconciled
+- [x] Issue-float sheet (supervisor + project + amount)
+
+### Mobile — Cost Reports (`(accountant)/cost-reports.tsx`)
+- [x] Company totals with labor/materials/petty cash split
+- [x] Per-project budget vs. actual with per-category progress bars
 
 ---
 
@@ -233,6 +253,6 @@
 | **4** | Sync engine (offline → server) | ✅ Done |
 | **5** | Super Supervisor: live board, coordination, verification | ✅ Done |
 | **6** | Owner: project management, dashboard, drill-down | ✅ Done |
-| **7** | Accountant: payment queue, reconciliation, cost reports | 🔲 **Next** |
-| **8** | Push notifications (FCM) | 🔲 Pending |
+| **7** | Accountant: payment queue, reconciliation, cost reports | ✅ Done |
+| **8** | Push notifications (FCM) | 🔲 **Next** |
 | **9** | Polish: compression, offline UX, error handling, build | 🔲 Pending |

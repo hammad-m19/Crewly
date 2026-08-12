@@ -105,8 +105,13 @@ Applies local WatermelonDB changes to MongoDB.
 ## Teams
 
 ### GET /api/teams
+`dailyRate` is included for Owner/Accountant only (moneyFilter strips it for others).
+
 ### POST /api/teams (Owner/Super)
-### PATCH /api/teams/:id
+
+### PATCH /api/teams/:id (Owner/Accountant)
+Owner may update `name`, `trade`, `defaultPaymentType`, `contactPhone`, `isActive`, `dailyRate`.
+Accountant may only update `dailyRate` (per person per day, drives wage suggestions).
 
 ---
 
@@ -204,6 +209,53 @@ purchases, `flagged` when a receipt is missing or the entry was late),
 
 ---
 
+## Payments (Accountant/Owner only)
+
+Router-level `requireRole(Role.ACCOUNTANT, Role.OWNER)`.
+
+### GET /api/payments?projectId=\<id\>&teamId=\<id\>&type=\<PaymentRecordType\>
+
+### POST /api/payments
+Body: `{ projectId, teamId, type, amount, date, linkedDailyReportId?, linkedTeamSiteAssignmentId?, notes? }`
+- `teamId` required for `daily_wage` / `milestone` / `lump_sum_installment`.
+- **Duplicate guard**: a second `daily_wage` or `milestone` payment for the same
+  `(linkedDailyReportId, teamId, type)` → 409.
+- **Overpay guard**: `lump_sum_installment` requires `linkedTeamSiteAssignmentId`;
+  cumulative installments may not exceed the assignment's `agreedTotal` → 400.
+
+---
+
+## Accountant (Accountant/Owner only)
+
+Router-level `requireRole(Role.ACCOUNTANT, Role.OWNER)`. All responses resolve
+names server-side so the Accountant never needs the Owner-only `/users` list.
+
+### GET /api/accountant/payment-queue
+Scans daily reports from the last 30 days. Returns three buckets plus `counts`:
+- `dailyWages` — report entries of daily-wage teams with no wage payment linked to
+  that report; `suggestedAmount = headcount × team.dailyRate` (× 0.5 for `half_day`,
+  `null` if the team has no rate). No-shows and local labor (null teamId) excluded.
+- `milestones` — entries with `taskCompleted` **and** a `TaskVerification`, unpaid.
+- `lumpSums` — active lump-sum assignments with `paidSoFar` / `remaining` (from
+  installments linked to the assignment); fully-paid ones drop out.
+
+### GET /api/accountant/purchases
+All purchases with `projectName` / `purchasedByName` resolved, plus
+`counts: { total, missingReceipt, flaggedLate, unverified }`.
+
+### GET /api/accountant/reconciliation
+Petty cash `batches` (float/spent/balance, expense lines, missing-receipt count,
+names resolved; unreconciled first) plus `supervisors` and `projects` arrays for
+the issue-float form.
+
+### GET /api/accountant/cost-reports
+Per-project `breakdown` — `labor` / `materials` / `pettyCash`, each `{ budgeted, spent }`
+(budgeted maps to the `labor` / `materials` / `overhead` budget categories) — plus
+company-wide `totals`. Same derived-spend rules as `/owner/dashboard`, shared via
+`src/lib/costs.ts`.
+
+---
+
 ## Users
 
 ### GET /api/users?role=\<role\> — **Owner only**
@@ -232,7 +284,7 @@ Request → helmet → cors → json → rate-limit → route-specific:
 
 /api/auth/*           → (no auth)     → authRoutes
 /api/projects/*       → authenticate  → moneyFilter → projectRoutes
-/api/teams/*          → authenticate  → teamRoutes
+/api/teams/*          → authenticate  → moneyFilter → teamRoutes (teams carry dailyRate)
 /api/daily-reports/*  → authenticate  → moneyFilter → dailyReportRoutes
 /api/material-orders  → authenticate  → materialOrderRoutes
 /api/material-purchases → authenticate → moneyFilter → materialPurchaseRoutes
@@ -243,4 +295,6 @@ Request → helmet → cors → json → rate-limit → route-specific:
 /api/notifications/*  → authenticate  → notificationRoutes
 /api/owner/*          → authenticate  → moneyFilter → ownerRoutes (router-level Owner guard)
 /api/users/*          → authenticate  → userRoutes (per-route Owner guard)
+/api/payments/*       → authenticate  → moneyFilter → paymentRoutes (router-level Accountant/Owner guard)
+/api/accountant/*     → authenticate  → moneyFilter → accountantRoutes (router-level Accountant/Owner guard)
 ```

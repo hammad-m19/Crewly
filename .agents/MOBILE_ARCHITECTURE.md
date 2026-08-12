@@ -43,12 +43,16 @@ src/app/
 │   └── settings.tsx     # ✅ BUILT — Profile, links to users/notifications, sign out
 │
 └── (accountant)/        # Accountant — Tab Navigator
-    ├── _layout.tsx      # Tab bar with placeholder screens
-    ├── payment-queue.tsx    # 🔲 PLACEHOLDER
-    ├── purchases.tsx        # 🔲 PLACEHOLDER
-    ├── reconciliation.tsx   # 🔲 PLACEHOLDER
-    └── cost-reports.tsx     # 🔲 PLACEHOLDER
+    ├── _layout.tsx      # 4 tabs (Payments, Purchases, Reconcile, Reports)
+    ├── payment-queue.tsx    # ✅ BUILT — wages/milestones/lump-sums + record-payment sheet
+    ├── purchases.tsx        # ✅ BUILT — purchase list with receipt/late filters + verify
+    ├── reconciliation.tsx   # ✅ BUILT — petty cash batches, reconcile, issue-float sheet
+    └── cost-reports.tsx     # ✅ BUILT — per-project budget vs. labor/materials/petty cash
 ```
+
+The accountant screens are **API-driven** (via `apiFetch` against `/api/accountant/*`
+and `/api/payments`), not WatermelonDB queries — the aggregations resolve names
+server-side and depend on cross-collection joins that are cheaper on the backend.
 
 ---
 
