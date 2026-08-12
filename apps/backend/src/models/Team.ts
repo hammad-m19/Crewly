@@ -6,6 +6,8 @@ export interface ITeam extends Document {
   trade: Trade;
   defaultPaymentType: PaymentType;
   contactPhone?: string;
+  /** Per person per day, used to suggest daily-wage payments. Money-gated. */
+  dailyRate: number | null;
   isActive: boolean;
   created_at: number;
   updated_at: number;
@@ -27,6 +29,7 @@ const teamSchema = new Schema<ITeam>(
       default: PaymentType.DAILY_WAGE,
     },
     contactPhone: { type: String, trim: true },
+    dailyRate: { type: Number, default: null, min: 0 },
     isActive: { type: Boolean, default: true },
     // Sync fields
     created_at: { type: Number, default: () => Date.now() },

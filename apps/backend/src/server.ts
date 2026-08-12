@@ -18,6 +18,8 @@ import coordinationRoutes from './routes/coordination';
 import notificationRoutes from './routes/notifications';
 import ownerRoutes from './routes/owner';
 import userRoutes from './routes/users';
+import paymentRoutes from './routes/payments';
+import accountantRoutes from './routes/accountant';
 import { moneyFilter } from './middleware/moneyFilter';
 import { authenticate } from './middleware/auth';
 
@@ -61,7 +63,8 @@ app.use('/api/auth', authRoutes);
 
 // All routes below require authentication + money filter
 app.use('/api/projects', authenticate, moneyFilter, projectRoutes);
-app.use('/api/teams', authenticate, teamRoutes);
+// moneyFilter required: teams carry dailyRate, which supervisors must not see
+app.use('/api/teams', authenticate, moneyFilter, teamRoutes);
 app.use('/api/daily-reports', authenticate, moneyFilter, dailyReportRoutes);
 app.use('/api/material-orders', authenticate, materialOrderRoutes);
 app.use('/api/material-purchases', authenticate, moneyFilter, materialPurchaseRoutes);
@@ -72,6 +75,8 @@ app.use('/api/coordination', authenticate, coordinationRoutes);
 app.use('/api/notifications', authenticate, notificationRoutes);
 app.use('/api/owner', authenticate, moneyFilter, ownerRoutes);
 app.use('/api/users', authenticate, userRoutes);
+app.use('/api/payments', authenticate, moneyFilter, paymentRoutes);
+app.use('/api/accountant', authenticate, moneyFilter, accountantRoutes);
 
 // 404 handler
 app.use((_req, res) => {
