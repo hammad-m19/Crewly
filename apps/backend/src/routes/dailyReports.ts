@@ -95,9 +95,6 @@ router.post(
           ) {
             existing.headcountPresent = headcount;
           }
-          if (incoming.morningPresence !== MorningPresence.ON_SITE) {
-            // Keep EOD headcount unless we're seeding from morning on-site
-          }
         } else {
           report.teamEntries.push({
             teamId: incoming.teamId as any,
