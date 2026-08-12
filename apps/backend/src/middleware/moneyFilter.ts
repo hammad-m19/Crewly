@@ -43,6 +43,23 @@ export const moneyFilter = (
   next();
 };
 
+/** Leave BSON / Date / Buffer alone — recursive key walk corrupts them. */
+function isLeafObject(value: object): boolean {
+  if (value instanceof Date || Buffer.isBuffer(value)) return true;
+  const anyVal = value as { _bsontype?: string; toHexString?: () => string; constructor?: { name?: string } };
+  if (anyVal._bsontype === 'ObjectId') return true;
+  if (typeof anyVal.toHexString === 'function') return true;
+  if (anyVal.constructor?.name === 'ObjectId') return true;
+  return false;
+}
+
+function serializeLeaf(value: object): unknown {
+  if (value instanceof Date || Buffer.isBuffer(value)) return value;
+  const anyVal = value as { toHexString?: () => string; toString?: () => string };
+  if (typeof anyVal.toHexString === 'function') return anyVal.toHexString();
+  return String(value);
+}
+
 /**
  * Recursively strip money-related fields from an object or array.
  * Handles nested structures: arrays of records, sync response format
@@ -51,6 +68,10 @@ export const moneyFilter = (
 function stripMoneyFields(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
   if (typeof obj !== 'object') return obj;
+
+  if (isLeafObject(obj)) {
+    return serializeLeaf(obj);
+  }
 
   // Handle arrays — strip from each element
   if (Array.isArray(obj)) {

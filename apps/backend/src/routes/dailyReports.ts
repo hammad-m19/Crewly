@@ -1,12 +1,136 @@
 import { Router, Response } from 'express';
 import { DailyReport } from '../models/DailyReport';
 import { Notification } from '../models/Notification';
+import { Team } from '../models/Team';
 import { AuthRequest } from '../middleware/auth';
 import { requireRole } from '../middleware/roleGuard';
-import { Role, AttendanceStatus, NotificationType } from '@crewly/shared';
+import {
+  Role,
+  AttendanceStatus,
+  MorningPresence,
+  NotificationType,
+} from '@crewly/shared';
 import { notifyRole } from '../services/notify';
 
 const router = Router();
+
+/**
+ * POST /api/daily-reports/morning-checkin
+ * Site Supervisor morning roll-call: mark each assigned team on-site or not.
+ * Upserts today's daily report and notifies Owner + Super for absences.
+ */
+router.post(
+  '/morning-checkin',
+  requireRole(Role.SITE_SUPERVISOR),
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+      const { projectId, date, entries } = req.body as {
+        projectId?: string;
+        date?: string;
+        entries?: Array<{
+          teamId: string;
+          morningPresence: MorningPresence;
+          morningHeadcount?: number;
+          morningNotes?: string;
+        }>;
+      };
+
+      if (!projectId || !date || !Array.isArray(entries) || entries.length === 0) {
+        res.status(400).json({
+          success: false,
+          error: { message: 'projectId, date, and entries are required.' },
+        });
+        return;
+      }
+
+      for (const entry of entries) {
+        if (!entry.teamId || !Object.values(MorningPresence).includes(entry.morningPresence)) {
+          res.status(400).json({
+            success: false,
+            error: {
+              message: 'Each entry needs teamId and morningPresence (on_site | not_on_site).',
+            },
+          });
+          return;
+        }
+      }
+
+      const checkedAt = new Date().toISOString();
+      let report = await DailyReport.findOne({ projectId, date, _deleted: false });
+
+      if (!report) {
+        report = new DailyReport({
+          projectId,
+          date,
+          submittedBy: req.user!.userId,
+          teamEntries: [],
+        });
+      }
+
+      const byTeamId = new Map(
+        report.teamEntries
+          .filter((e) => e.teamId)
+          .map((e) => [e.teamId!.toString(), e])
+      );
+
+      for (const incoming of entries) {
+        const existing = byTeamId.get(incoming.teamId);
+        const headcount =
+          incoming.morningPresence === MorningPresence.ON_SITE
+            ? Math.max(0, incoming.morningHeadcount ?? existing?.morningHeadcount ?? 0)
+            : 0;
+
+        if (existing) {
+          existing.morningPresence = incoming.morningPresence;
+          existing.morningHeadcount = headcount;
+          existing.morningNotes =
+            incoming.morningPresence === MorningPresence.NOT_ON_SITE
+              ? (incoming.morningNotes || '').trim()
+              : '';
+          existing.morningCheckedAt = checkedAt;
+          if (
+            incoming.morningPresence === MorningPresence.ON_SITE &&
+            existing.headcountPresent === 0 &&
+            headcount > 0
+          ) {
+            existing.headcountPresent = headcount;
+          }
+        } else {
+          report.teamEntries.push({
+            teamId: incoming.teamId as any,
+            isLocalLabor: false,
+            headcountPresent: headcount,
+            attendanceStatus: AttendanceStatus.ON_TIME,
+            idleReason: null,
+            idleReasonNotes: '',
+            linkedMaterialOrderId: null,
+            taskWorkedOn: '',
+            taskCompleted: false,
+            remainingWorkNotes: '',
+            photos: [],
+            morningPresence: incoming.morningPresence,
+            morningHeadcount: headcount,
+            morningNotes:
+              incoming.morningPresence === MorningPresence.NOT_ON_SITE
+                ? (incoming.morningNotes || '').trim()
+                : '',
+            morningCheckedAt: checkedAt,
+          });
+        }
+      }
+
+      report.updated_at = Date.now();
+      await report.save();
+
+      await processMorningAlerts(entries, projectId, date, req.user!.userId);
+
+      res.json({ success: true, data: report.toObject() });
+    } catch (error) {
+      console.error('Morning check-in error:', error);
+      res.status(500).json({ success: false, error: { message: 'Internal server error.' } });
+    }
+  }
+);
 
 /**
  * POST /api/daily-reports
@@ -17,20 +141,44 @@ router.post('/', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest, res
     const { projectId, date, teamEntries } = req.body;
 
     if (!projectId || !date || !teamEntries) {
-      res.status(400).json({ success: false, error: { message: 'projectId, date, and teamEntries are required.' } });
+      res.status(400).json({
+        success: false,
+        error: { message: 'projectId, date, and teamEntries are required.' },
+      });
       return;
     }
 
-    // Check if report already exists for this project+date
     let report = await DailyReport.findOne({ projectId, date, _deleted: false });
 
     if (report) {
-      // Update existing report
-      report.teamEntries = teamEntries;
+      const morningByTeam = new Map(
+        report.teamEntries
+          .filter((e) => e.teamId && e.morningPresence)
+          .map((e) => [
+            e.teamId!.toString(),
+            {
+              morningPresence: e.morningPresence,
+              morningHeadcount: e.morningHeadcount,
+              morningNotes: e.morningNotes,
+              morningCheckedAt: e.morningCheckedAt,
+            },
+          ])
+      );
+
+      report.teamEntries = teamEntries.map((entry: any) => {
+        const tid = entry.teamId?.toString?.() || entry.teamId;
+        const morning = tid ? morningByTeam.get(tid) : undefined;
+        return {
+          ...entry,
+          morningPresence: entry.morningPresence ?? morning?.morningPresence ?? null,
+          morningHeadcount: entry.morningHeadcount ?? morning?.morningHeadcount ?? 0,
+          morningNotes: entry.morningNotes ?? morning?.morningNotes ?? '',
+          morningCheckedAt: entry.morningCheckedAt ?? morning?.morningCheckedAt ?? null,
+        };
+      });
       report.updated_at = Date.now();
       await report.save();
     } else {
-      // Create new report
       report = new DailyReport({
         projectId,
         date,
@@ -40,10 +188,9 @@ router.post('/', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest, res
       await report.save();
     }
 
-    // Detect no-shows and idle teams → create notifications
     await processAlerts(teamEntries, projectId, date, req.user!.userId);
 
-    res.status(report.isNew ? 201 : 200).json({
+    res.status(200).json({
       success: true,
       data: report.toObject(),
     });
@@ -55,7 +202,6 @@ router.post('/', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest, res
 
 /**
  * GET /api/daily-reports
- * List reports — filtered by role permissions.
  */
 router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -69,7 +215,6 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
       filter.date = { $gte: startDate, $lte: endDate };
     }
 
-    // Site Supervisor can only see their own reports
     if (req.user!.role === Role.SITE_SUPERVISOR) {
       filter.submittedBy = req.user!.userId;
     }
@@ -101,7 +246,6 @@ router.get('/', async (req: AuthRequest, res: Response): Promise<void> => {
 
 /**
  * GET /api/daily-reports/:id
- * Get a single report by ID.
  */
 router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -121,7 +265,6 @@ router.get('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
 
 /**
  * PATCH /api/daily-reports/:id
- * Update an existing report (e.g. adding late entries, photos).
  */
 router.patch('/:id', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -132,21 +275,46 @@ router.patch('/:id', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest,
       return;
     }
 
-    // Only the submitter can update their own report
     if (report.submittedBy.toString() !== req.user!.userId) {
-      res.status(403).json({ success: false, error: { message: 'You can only update your own reports.' } });
+      res.status(403).json({
+        success: false,
+        error: { message: 'You can only update your own reports.' },
+      });
       return;
     }
 
     const { teamEntries } = req.body;
     if (teamEntries) {
-      report.teamEntries = teamEntries;
+      const morningByTeam = new Map(
+        report.teamEntries
+          .filter((e) => e.teamId && e.morningPresence)
+          .map((e) => [
+            e.teamId!.toString(),
+            {
+              morningPresence: e.morningPresence,
+              morningHeadcount: e.morningHeadcount,
+              morningNotes: e.morningNotes,
+              morningCheckedAt: e.morningCheckedAt,
+            },
+          ])
+      );
+
+      report.teamEntries = teamEntries.map((entry: any) => {
+        const tid = entry.teamId?.toString?.() || entry.teamId;
+        const morning = tid ? morningByTeam.get(tid) : undefined;
+        return {
+          ...entry,
+          morningPresence: entry.morningPresence ?? morning?.morningPresence ?? null,
+          morningHeadcount: entry.morningHeadcount ?? morning?.morningHeadcount ?? 0,
+          morningNotes: entry.morningNotes ?? morning?.morningNotes ?? '',
+          morningCheckedAt: entry.morningCheckedAt ?? morning?.morningCheckedAt ?? null,
+        };
+      });
     }
 
     report.updated_at = Date.now();
     await report.save();
 
-    // Re-check alerts on update
     if (teamEntries) {
       await processAlerts(teamEntries, report.projectId.toString(), report.date, req.user!.userId);
     }
@@ -158,10 +326,66 @@ router.patch('/:id', requireRole(Role.SITE_SUPERVISOR), async (req: AuthRequest,
   }
 });
 
-/**
- * Process no-shows and idle teams from team entries.
- * Creates notifications for Super Supervisors same-day (via notify service).
- */
+async function processMorningAlerts(
+  entries: Array<{
+    teamId: string;
+    morningPresence: MorningPresence;
+    morningNotes?: string;
+  }>,
+  projectId: string,
+  date: string,
+  submittedBy: string
+): Promise<void> {
+  try {
+    const absent = entries.filter((e) => e.morningPresence === MorningPresence.NOT_ON_SITE);
+    if (absent.length === 0) return;
+
+    const teamIds = absent.map((e) => e.teamId);
+    const teams = await Team.find({ _id: { $in: teamIds }, _deleted: false })
+      .select('name trade contactPhone')
+      .lean();
+    const teamMap = new Map(teams.map((t: any) => [t._id.toString(), t]));
+
+    const since = Date.now() - 12 * 60 * 60 * 1000;
+
+    for (const entry of absent) {
+      const team = teamMap.get(entry.teamId);
+      const teamName = team?.name || 'A team';
+      const phone = team?.contactPhone ? ` Call: ${team.contactPhone}.` : '';
+      const notes = entry.morningNotes?.trim() ? ` Note: ${entry.morningNotes.trim()}` : '';
+
+      const existing = await Notification.findOne({
+        type: NotificationType.MORNING_ABSENCE,
+        projectId,
+        _deleted: false,
+        metadata: { $regex: entry.teamId },
+        created_at: { $gte: since },
+      }).lean();
+
+      if (existing) continue;
+
+      const payload = {
+        type: NotificationType.MORNING_ABSENCE,
+        projectId,
+        title: '🌅 Team not on site',
+        message: `${teamName} is not on site this morning (${date}).${phone}${notes} Assign a replacement if needed.`,
+        metadata: {
+          teamId: entry.teamId,
+          date,
+          reportedBy: submittedBy,
+          morningNotes: entry.morningNotes || '',
+          contactPhone: team?.contactPhone || '',
+        },
+      };
+
+      await notifyRole(Role.OWNER, payload);
+      await notifyRole(Role.SUPER_SUPERVISOR, payload);
+    }
+  } catch (error) {
+    console.error('Morning alert processing error:', error);
+  }
+}
+
 async function processAlerts(
   teamEntries: Array<{ attendanceStatus: string; idleReason?: string; teamId?: string | null }>,
   projectId: string,
@@ -174,7 +398,6 @@ async function processAlerts(
     for (const entry of teamEntries) {
       const teamId = entry.teamId || 'local_labor';
 
-      // No-show detection — notify immediately (idempotent within 24h)
       if (entry.attendanceStatus === AttendanceStatus.NO_SHOW) {
         const existing = await Notification.findOne({
           type: NotificationType.NO_SHOW,
@@ -195,7 +418,6 @@ async function processAlerts(
         }
       }
 
-      // Idle team detection
       if (entry.idleReason && entry.idleReason !== 'no_show') {
         const existing = await Notification.findOne({
           type: NotificationType.IDLE_TEAM,
@@ -217,7 +439,6 @@ async function processAlerts(
       }
     }
   } catch (error) {
-    // Don't fail the main request if notification creation fails
     console.error('Alert processing error:', error);
   }
 }

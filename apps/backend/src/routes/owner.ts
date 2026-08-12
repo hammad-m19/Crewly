@@ -82,6 +82,7 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
     let teamsWorking = 0;
     let idleTeams = 0;
     let noShowTeams = 0;
+    let morningAbsentTeams = 0;
     let unverifiedTasks = 0;
 
     const projectSummaries = projects.map((project: any) => {
@@ -91,6 +92,7 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
       let projectWorking = 0;
       let projectIdle = 0;
       let projectNoShow = 0;
+      let projectMorningAbsent = 0;
       let projectUnverified = 0;
 
       if (latestReport) {
@@ -100,6 +102,13 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
           if (entry.attendanceStatus === 'no_show') projectNoShow++;
           else if (entry.idleReason) projectIdle++;
           else projectWorking++;
+
+          if (
+            latestReport.date === today &&
+            entry.morningPresence === 'not_on_site'
+          ) {
+            projectMorningAbsent++;
+          }
 
           if (entry.taskCompleted && !verifiedKeys.has(`${toId(latestReport._id)}_${i}`)) {
             projectUnverified++;
@@ -112,6 +121,7 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
         teamsWorking += projectWorking;
         idleTeams += projectIdle;
         noShowTeams += projectNoShow;
+        morningAbsentTeams += projectMorningAbsent;
       }
       unverifiedTasks += projectUnverified;
 
@@ -140,6 +150,7 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
           working: projectWorking,
           idle: projectIdle,
           noShow: projectNoShow,
+          morningAbsent: projectMorningAbsent,
           unverified: projectUnverified,
         },
       };
@@ -173,7 +184,8 @@ router.get('/dashboard', async (_req: AuthRequest, res: Response): Promise<void>
           teamsWorking,
           idleTeams,
           noShowTeams,
-          pendingActions: unverifiedTasks + overdueOrders + missingReceipts + unreconciledFloats,
+          morningAbsentTeams,
+          pendingActions: unverifiedTasks + overdueOrders + missingReceipts + unreconciledFloats + morningAbsentTeams,
         },
         pendingActions: {
           unverifiedTasks,

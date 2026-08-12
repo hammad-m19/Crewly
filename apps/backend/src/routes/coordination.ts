@@ -73,6 +73,9 @@ router.get('/overview', requireRole(Role.SUPER_SUPERVISOR), async (_req: AuthReq
       let blockedCount = 0;
       let activeCount = 0;
       let unverifiedCount = 0;
+      let morningAbsentCount = 0;
+
+      const today = new Date().toISOString().split('T')[0];
 
       if (latestReport) {
         for (let i = 0; i < latestReport.teamEntries.length; i++) {
@@ -83,6 +86,13 @@ router.get('/overview', requireRole(Role.SUPER_SUPERVISOR), async (_req: AuthReq
             if (entry.idleReason === 'material_not_there') blockedCount++;
           } else {
             activeCount++;
+          }
+
+          if (
+            latestReport.date === today &&
+            entry.morningPresence === 'not_on_site'
+          ) {
+            morningAbsentCount++;
           }
 
           // Check for unverified completed tasks
@@ -109,6 +119,10 @@ router.get('/overview', requireRole(Role.SUPER_SUPERVISOR), async (_req: AuthReq
               idleReason: teamEntry.idleReason,
               taskCompleted: teamEntry.taskCompleted,
               taskWorkedOn: teamEntry.taskWorkedOn,
+              morningPresence: teamEntry.morningPresence || null,
+              morningHeadcount: teamEntry.morningHeadcount || 0,
+              morningNotes: teamEntry.morningNotes || '',
+              morningCheckedAt: teamEntry.morningCheckedAt || null,
             };
           }
         }
@@ -135,6 +149,7 @@ router.get('/overview', requireRole(Role.SUPER_SUPERVISOR), async (_req: AuthReq
           idle: idleCount,
           noShow: noShowCount,
           blocked: blockedCount,
+          morningAbsent: morningAbsentCount,
           unverified: unverifiedCount,
         },
         latestReportDate: latestReport?.date || null,
