@@ -1,27 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { useRoleTabScreenOptions } from '../../theme/navigation';
 
 export default function OwnerLayout() {
+  const screenOptions = useRoleTabScreenOptions(colors.role.owner);
+
   return (
-    <Tabs
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.role.owner },
-        headerTintColor: colors.text.inverse,
-        headerTitleStyle: typography.heading4,
-        tabBarActiveTintColor: colors.role.owner,
-        tabBarInactiveTintColor: colors.neutral[400],
-        tabBarStyle: {
-          backgroundColor: colors.background.secondary,
-          borderTopColor: colors.neutral[200],
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 4,
-        },
-        tabBarLabelStyle: typography.caption,
-      }}
-    >
+    <Tabs screenOptions={screenOptions}>
       <Tabs.Screen
         name="dashboard"
         options={{
@@ -77,4 +63,3 @@ const tabStyles = StyleSheet.create({
   iconContainer: { alignItems: 'center', justifyContent: 'center' },
   icon: { fontSize: 22 },
 });
-

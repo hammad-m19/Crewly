@@ -1,25 +1,13 @@
 import { Tabs } from 'expo-router';
 import { Text, View, StyleSheet } from 'react-native';
 import { colors } from '../../theme/colors';
-import { typography } from '../../theme/typography';
+import { useRoleTabScreenOptions } from '../../theme/navigation';
 
 export default function SuperSupervisorLayout() {
+  const screenOptions = useRoleTabScreenOptions(colors.role.super_supervisor);
+
   return (
-    <Tabs
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.role.super_supervisor },
-        headerTintColor: colors.text.inverse,
-        headerTitleStyle: typography.heading4,
-        tabBarActiveTintColor: colors.role.super_supervisor,
-        tabBarInactiveTintColor: colors.neutral[400],
-        tabBarStyle: {
-          backgroundColor: colors.background.secondary,
-          borderTopColor: colors.neutral[200],
-          height: 60, paddingBottom: 8, paddingTop: 4,
-        },
-        tabBarLabelStyle: typography.caption,
-      }}
-    >
+    <Tabs screenOptions={screenOptions}>
       <Tabs.Screen name="live-board" options={{
         title: 'Live Board',
         headerTitle: 'All Sites',
