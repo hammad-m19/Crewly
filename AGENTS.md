@@ -350,3 +350,4 @@ All planned phases (1–9) are complete.
 6. Register in `apps/mobile/src/db/index.ts` (modelClasses array)
 7. Add to sync `modelMap` in `apps/backend/src/routes/sync.ts`
 8. Bump schema version + add migration if needed
+
