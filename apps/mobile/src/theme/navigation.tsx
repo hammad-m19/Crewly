@@ -4,8 +4,9 @@ import { BottomTabBar, type BottomTabBarProps } from 'expo-router/tabs';
 import { colors } from './colors';
 import { typography } from './typography';
 
-/** iPhone home-indicator height when SafeArea reports 0 (common in the simulator). */
+/** Fallback when SafeAreaInsets reports 0 (common on some iOS simulators). */
 const IOS_HOME_INDICATOR = 34;
+const TAB_CONTENT_HEIGHT = 49;
 
 function useBottomSafeInset() {
   const insets = useSafeAreaInsets();
@@ -17,12 +18,25 @@ function useBottomSafeInset() {
 
 function SafeTabBar(props: BottomTabBarProps) {
   const bottom = useBottomSafeInset();
-  return <BottomTabBar {...props} insets={{ ...props.insets, bottom }} />;
+  return (
+    <BottomTabBar
+      {...props}
+      insets={{ ...props.insets, bottom }}
+      style={[
+        props.style,
+        {
+          height: TAB_CONTENT_HEIGHT + bottom,
+          paddingBottom: bottom,
+          paddingTop: 4,
+        },
+      ]}
+    />
+  );
 }
 
 /**
  * Shared tab navigator props for every role.
- * Forces a real bottom inset so the tab bar sits above the home indicator.
+ * Forces bottom inset so labels sit above the home indicator.
  */
 export function useRoleTabNavigator(roleColor: string) {
   const insets = useSafeAreaInsets();
@@ -32,9 +46,10 @@ export function useRoleTabNavigator(roleColor: string) {
     safeAreaInsets: {
       top: insets.top,
       bottom,
-      left: insets.left,
-      right: insets.right,
+      left: Math.max(insets.left, 4),
+      right: Math.max(insets.right, 4),
     },
+    tabBar: (props: BottomTabBarProps) => <SafeTabBar {...props} />,
     screenOptions: {
       headerStyle: { backgroundColor: roleColor },
       headerTintColor: colors.text.inverse,
@@ -45,9 +60,12 @@ export function useRoleTabNavigator(roleColor: string) {
       tabBarStyle: {
         backgroundColor: colors.background.secondary,
         borderTopColor: colors.neutral[200],
+        height: TAB_CONTENT_HEIGHT + bottom,
+        paddingBottom: bottom,
+        paddingTop: 4,
       },
-      tabBarLabelStyle: typography.caption,
-      tabBar: (props: BottomTabBarProps) => <SafeTabBar {...props} />,
+      tabBarLabelStyle: { ...typography.caption, fontSize: 10 },
+      tabBarItemStyle: { paddingHorizontal: 2 },
     },
   };
 }

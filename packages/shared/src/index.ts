@@ -47,6 +47,17 @@ export enum AttendanceStatus {
   NO_SHOW = 'no_show',
 }
 
+/**
+ * Morning roll-call — Site Supervisor marks who is physically on site
+ * at the start of the day (separate from end-of-day AttendanceStatus).
+ */
+export enum MorningPresence {
+  ON_SITE = 'on_site',
+  NOT_ON_SITE = 'not_on_site',
+  /** Scheduled for this site but not required today */
+  NOT_NEEDED = 'not_needed',
+}
+
 /** Why a team isn't working — required when team is idle */
 export enum IdleReason {
   MATERIAL_NOT_THERE = 'material_not_there',
@@ -101,6 +112,7 @@ export enum PaymentRecordType {
 export enum NotificationType {
   IDLE_TEAM = 'idle_team',
   NO_SHOW = 'no_show',
+  MORNING_ABSENCE = 'morning_absence',
   MATERIAL_OVERDUE = 'material_overdue',
   ESCALATION_IDLE = 'escalation_idle',
   ESCALATION_NO_SHOW = 'escalation_no_show',
@@ -147,6 +159,14 @@ export interface TeamEntry {
   taskCompleted: boolean;
   remainingWorkNotes?: string;
   photos: string[]; // local URIs or remote URLs
+  /** Start-of-day roll-call — who is physically on site right now */
+  morningPresence?: MorningPresence | null;
+  /** Headcount counted at morning check-in (when on site) */
+  morningHeadcount?: number;
+  /** Why absent / who to call — filled when not on site */
+  morningNotes?: string;
+  /** ISO timestamp when morning presence was last confirmed */
+  morningCheckedAt?: string | null;
 }
 
 /** Float issuance record within PettyCash */

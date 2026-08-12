@@ -22,6 +22,9 @@ interface TeamStatus {
     idleReason: string | null;
     taskCompleted: boolean;
     taskWorkedOn: string;
+    morningPresence?: string | null;
+    morningHeadcount?: number;
+    morningNotes?: string;
   } | null;
 }
 
@@ -30,7 +33,14 @@ interface ProjectOverview {
   projectName: string;
   projectLocation: string;
   teams: TeamStatus[];
-  flags: { active: number; idle: number; noShow: number; blocked: number; unverified: number };
+  flags: {
+    active: number;
+    idle: number;
+    noShow: number;
+    blocked: number;
+    morningAbsent?: number;
+    unverified: number;
+  };
   latestReportDate: string | null;
   totalAssignedTeams: number;
 }
@@ -190,7 +200,11 @@ function ProjectCard({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const totalFlags = project.flags.idle + project.flags.noShow + project.flags.blocked;
+  const totalFlags =
+    project.flags.idle +
+    project.flags.noShow +
+    project.flags.blocked +
+    (project.flags.morningAbsent || 0);
 
   return (
     <View style={cardStyles.container}>
@@ -222,6 +236,12 @@ function ProjectCard({
         )}
         {project.flags.noShow > 0 && (
           <MiniPill label={`${project.flags.noShow} no-show`} color={colors.danger.main} />
+        )}
+        {(project.flags.morningAbsent ?? 0) > 0 && (
+          <MiniPill
+            label={`${project.flags.morningAbsent} not on site`}
+            color={colors.accent[800]}
+          />
         )}
         {project.flags.blocked > 0 && (
           <MiniPill label={`${project.flags.blocked} blocked`} color={colors.info.main} />
@@ -272,6 +292,13 @@ function TeamRow({ team }: { team: TeamStatus }) {
     ? `⚠️ Idle: ${status.idleReason.replace(/_/g, ' ')}`
     : `✅ Working (${status.headcountPresent} pax)`;
 
+  const morningLabel =
+    status?.morningPresence === 'not_on_site'
+      ? '🌅 Not on site this morning'
+      : status?.morningPresence === 'on_site'
+      ? `🌅 On site (${status.morningHeadcount || status.headcountPresent || 0})`
+      : null;
+
   return (
     <View style={teamStyles.row}>
       <View style={[teamStyles.indicator, { backgroundColor: statusColor }]} />
@@ -280,7 +307,27 @@ function TeamRow({ team }: { team: TeamStatus }) {
         <Text style={teamStyles.trade}>{team.trade.replace(/_/g, ' ')}</Text>
       </View>
       <View style={teamStyles.statusArea}>
+        {morningLabel ? (
+          <Text
+            style={[
+              teamStyles.status,
+              {
+                color:
+                  status?.morningPresence === 'not_on_site'
+                    ? colors.accent[800]
+                    : colors.success.main,
+              },
+            ]}
+          >
+            {morningLabel}
+          </Text>
+        ) : null}
         <Text style={[teamStyles.status, { color: statusColor }]}>{statusLabel}</Text>
+        {status?.morningPresence === 'not_on_site' && status.morningNotes ? (
+          <Text style={teamStyles.task} numberOfLines={2}>
+            {status.morningNotes}
+          </Text>
+        ) : null}
         {status?.taskCompleted && (
           <Text style={teamStyles.taskBadge}>✅ Task done</Text>
         )}
