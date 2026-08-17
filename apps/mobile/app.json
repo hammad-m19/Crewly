@@ -4,31 +4,29 @@
     "slug": "crewly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/3h-logo.jpeg",
     "scheme": "crewly",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/3h-logo.jpeg",
       "resizeMode": "contain",
-      "backgroundColor": "#1E3F7E"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "bundleIdentifier": "com.crewly.app",
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/images/3h-logo.jpeg"
     },
     "android": {
       "package": "com.crewly.app",
       "adaptiveIcon": {
-        "backgroundColor": "#1E3F7E",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/images/3h-logo.jpeg"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/3h-logo.jpeg"
     },
     "plugins": [
       "expo-router",
@@ -36,8 +34,8 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/icon.png",
-          "color": "#1E3F7E"
+          "icon": "./assets/images/3h-logo.jpeg",
+          "color": "#FFFFFF"
         }
       ],
       [
@@ -58,8 +56,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#1E3F7E",
-          "image": "./assets/images/splash-icon.png",
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/images/3h-logo.jpeg",
           "imageWidth": 200
         }
       ]
