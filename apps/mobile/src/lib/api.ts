@@ -18,7 +18,7 @@ function getDevApiBaseUrl(): string {
 
 const API_BASE_URL = __DEV__
   ? getDevApiBaseUrl()
-  : 'https://api.crewly.app/api';
+  : 'https://crewly-bepo.onrender.com/api';
 
 /** GET-only retries for transient network failures */
 const GET_MAX_ATTEMPTS = 3;
