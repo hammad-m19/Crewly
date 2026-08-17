@@ -4,24 +4,19 @@
     "slug": "crewly",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/3h-logo.jpeg",
+    "icon": "./assets/images/app-icon.png",
     "scheme": "crewly",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/images/3h-logo.jpeg",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    },
     "ios": {
       "bundleIdentifier": "com.crewly.app",
-      "icon": "./assets/images/3h-logo.jpeg"
+      "icon": "./assets/images/app-icon.png"
     },
     "android": {
       "package": "com.crewly.app",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/3h-logo.jpeg"
+        "foregroundImage": "./assets/images/app-icon.png"
       },
       "permissions": [
         "android.permission.CAMERA",
@@ -34,7 +29,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/images/3h-logo.jpeg",
+      "favicon": "./assets/images/app-icon.png",
       "bundler": "metro"
     },
     "plugins": [
@@ -43,7 +38,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/3h-logo.jpeg",
+          "icon": "./assets/images/app-icon.png",
           "color": "#FFFFFF"
         }
       ],
@@ -58,7 +53,7 @@
         "expo-build-properties",
         {
           "android": {
-            "kotlinVersion": "1.9.25",
+            "kotlinVersion": "2.1.20",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "minSdkVersion": 24
@@ -69,10 +64,11 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/images/3h-logo.jpeg",
+          "image": "./assets/images/app-icon.png",
           "imageWidth": 200
         }
-      ]
+      ],
+      "expo-image"
     ],
     "experiments": {
       "typedRoutes": true,
