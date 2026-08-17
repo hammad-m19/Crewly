@@ -23,7 +23,7 @@ function SafeTabBar(props: BottomTabBarProps) {
       {...props}
       insets={{ ...props.insets, bottom }}
       style={[
-        props.style,
+        (props as any).style,
         {
           height: TAB_CONTENT_HEIGHT + bottom,
           paddingBottom: bottom,
