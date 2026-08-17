@@ -9,6 +9,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -69,7 +70,10 @@ export default function LoginScreen() {
         {/* Logo / Branding */}
         <View style={styles.brandingSection}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoIcon}>🏗️</Text>
+            <Image 
+              source={require('@/assets/images/3h-logo.jpeg')} 
+              style={styles.logoImage} 
+            />
           </View>
           <Text style={styles.appName}>Crewly</Text>
           <Text style={styles.tagline}>Construction Management</Text>
@@ -165,14 +169,17 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: borderRadius.xl,
-    backgroundColor: colors.accent[500],
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.lg,
+    overflow: 'hidden',
     ...shadows.lg,
   },
-  logoIcon: {
-    fontSize: 40,
+  logoImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
   },
   appName: {
     ...typography.heading1,
