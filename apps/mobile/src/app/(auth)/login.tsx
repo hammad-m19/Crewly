@@ -71,7 +71,7 @@ export default function LoginScreen() {
         <View style={styles.brandingSection}>
           <View style={styles.logoContainer}>
             <Image 
-              source={require('@/assets/images/3h-logo.jpeg')} 
+              source={require('@/assets/images/app-icon.png')} 
               style={styles.logoImage} 
             />
           </View>
