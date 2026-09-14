@@ -203,6 +203,18 @@ export interface AssignmentChange {
   changedAt: string; // ISO date
 }
 
+/** Task tracked separately for a team */
+export interface TeamTask {
+  id?: string;
+  projectId: string;
+  teamId: string;
+  description: string;
+  isCompleted: boolean;
+  createdBy: string; // userId
+  createdAt: string; // ISO date
+  completedAt?: string | null; // ISO date
+}
+
 // ----------------------------------------------------------
 // API request/response shapes
 // ----------------------------------------------------------
@@ -322,4 +334,5 @@ export const TABLE_NAMES = {
   PETTY_CASH: 'petty_cash',
   PAYMENTS: 'payments',
   NOTIFICATIONS: 'notifications',
+  TASKS: 'tasks',
 } as const;

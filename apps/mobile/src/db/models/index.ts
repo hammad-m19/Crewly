@@ -9,3 +9,4 @@ export { default as MaterialPurchaseModel } from './MaterialPurchaseModel';
 export { default as PettyCashModel } from './PettyCashModel';
 export { default as PaymentModel } from './PaymentModel';
 export { default as NotificationModel } from './NotificationModel';
+export { default as TaskModel } from './TaskModel';
