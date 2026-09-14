@@ -14,6 +14,7 @@ import {
   PettyCashModel,
   PaymentModel,
   NotificationModel,
+  TaskModel,
 } from './models';
 
 /**
@@ -47,6 +48,7 @@ const database = new Database({
     PettyCashModel,
     PaymentModel,
     NotificationModel,
+    TaskModel,
   ],
 });
 

@@ -23,6 +23,11 @@ export default function SiteSupervisorLayout() {
         headerTitle: "Today's Report",
         tabBarIcon: ({ color }) => <TabIcon emoji="📝" color={color} />,
       }} />
+      <Tabs.Screen name="team-tasks" options={{
+        title: 'Tasks',
+        headerTitle: 'Team Tasks',
+        tabBarIcon: ({ color }) => <TabIcon emoji="📋" color={color} />,
+      }} />
       <Tabs.Screen name="materials" options={{
         title: 'Materials',
         tabBarIcon: ({ color }) => <TabIcon emoji="📦" color={color} />,

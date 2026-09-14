@@ -13,6 +13,8 @@ import { colors } from '../../theme/colors';
 import { typography } from '../../theme/typography';
 import { spacing, borderRadius, shadows } from '../../theme/spacing';
 import { useSyncStore } from '../../store/syncStore';
+import { useAuthStore } from '../../store/authStore';
+import { apiFetch } from '../../lib/api';
 import { AttendanceStatus, IdleReason, TeamEntry } from '@crewly/shared';
 import Badge from '../../components/ui/Badge';
 import StatusChip from '../../components/ui/StatusChip';
@@ -64,6 +66,7 @@ interface TeamReportEntry {
 }
 
 export default function DailyReportForm() {
+  const user = useAuthStore((s) => s.user);
   const { isOnline, lastError } = useSyncStore();
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -72,29 +75,148 @@ export default function DailyReportForm() {
   });
   const todayISO = new Date().toISOString().split('T')[0];
 
-  // Landing load gate — reserved for WatermelonDB assignment fetch
-  const [teamsLoading] = useState(false);
-
-  // Initialize team entries
-  const [entries, setEntries] = useState<TeamReportEntry[]>(
-    MOCK_ASSIGNED_TEAMS.map((team) => ({
-      teamId: team.id,
-      teamName: team.name,
-      trade: team.trade,
-      isLocalLabor: false,
-      headcountPresent: 0,
-      attendanceStatus: AttendanceStatus.ON_TIME,
-      idleReason: null,
-      idleReasonNotes: '',
-      taskWorkedOn: '',
-      taskCompleted: false,
-      photos: [],
-    }))
-  );
+  const [teamsLoading, setTeamsLoading] = useState(true);
+  const [entries, setEntries] = useState<TeamReportEntry[]>([]);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [projectName, setProjectName] = useState('');
+  const [error, setError] = useState<string | null>(null);
 
   const [localLaborCount, setLocalLaborCount] = useState(0);
   const [showIdleModal, setShowIdleModal] = useState<number | null>(null);
   const [isDraft, setIsDraft] = useState(true);
+
+  function toIdString(value: unknown): string | null {
+    if (value == null) return null;
+    if (typeof value === 'string' && /^[a-f\d]{24}$/i.test(value)) return value;
+    if (typeof value === 'object') {
+      const obj = value as Record<string, unknown>;
+      if (typeof obj.$oid === 'string') return obj.$oid;
+      if (typeof (obj as { toHexString?: () => string }).toHexString === 'function') {
+        return (obj as { toHexString: () => string }).toHexString();
+      }
+      if (typeof obj._id === 'string') return toIdString(obj._id);
+    }
+    const asString = String(value);
+    if (/^[a-f\d]{24}$/i.test(asString)) return asString;
+    return null;
+  }
+
+  const load = useCallback(async () => {
+    setTeamsLoading(true);
+    setError(null);
+
+    try {
+      const siteIds = (user?.assignedSites || [])
+        .map((s) => toIdString(s))
+        .filter((id): id is string => !!id);
+
+      let resolvedProjectId = siteIds[0] || null;
+      let resolvedProjectName = '';
+
+      const projectsRes = await apiFetch<Array<{ _id: string; id?: string; name: string }>>(
+        '/projects'
+      );
+
+      if (!projectsRes.success) {
+        setError(projectsRes.error?.message || 'Could not load projects.');
+        setTeamsLoading(false);
+        return;
+      }
+
+      const projects = projectsRes.data || [];
+
+      if (!resolvedProjectId && projects.length) {
+        resolvedProjectId =
+          toIdString((projects[0] as any)._id) || toIdString((projects[0] as any).id);
+        resolvedProjectName = projects[0].name;
+      } else if (resolvedProjectId) {
+        const match = projects.find(
+          (p: any) =>
+            toIdString(p._id) === resolvedProjectId || toIdString(p.id) === resolvedProjectId
+        );
+        resolvedProjectName = match?.name || 'Your site';
+      }
+
+      if (!resolvedProjectId) {
+        setEntries([]);
+        setProjectId(null);
+        setError(null);
+        setTeamsLoading(false);
+        return;
+      }
+
+      setProjectId(resolvedProjectId);
+      setProjectName(resolvedProjectName);
+
+      const [assignRes, reportRes] = await Promise.all([
+        apiFetch<any[]>(`/teams/assignments?projectId=${encodeURIComponent(resolvedProjectId)}`),
+        apiFetch<any[]>(
+          `/daily-reports?projectId=${encodeURIComponent(resolvedProjectId)}&date=${todayISO}`
+        ),
+      ]);
+
+      if (!assignRes.success) {
+        setError(assignRes.error?.message || 'Could not load team assignments.');
+        setTeamsLoading(false);
+        return;
+      }
+
+      const assignments = assignRes.data || [];
+      const report = reportRes.data?.[0];
+      const entriesByTeam = new Map<string, any>();
+      for (const entry of report?.teamEntries || []) {
+        if (entry.isLocalLabor) {
+          setLocalLaborCount(entry.headcountPresent || 0);
+          continue;
+        }
+        const tid = toIdString(entry.teamId);
+        if (tid) entriesByTeam.set(tid, entry);
+      }
+
+      if (report && report._id) {
+        setIsDraft(false);
+      }
+
+      const nextEntries: TeamReportEntry[] = assignments
+        .map((a: any) => {
+          const team = a.teamId;
+          const teamId =
+            typeof team === 'object'
+              ? toIdString(team?._id) || toIdString(team)
+              : toIdString(team);
+          if (!teamId) return null;
+
+          const teamName = typeof team === 'object' ? team.name || 'Team' : 'Team';
+          const trade = typeof team === 'object' ? team.trade || '' : '';
+          const existing = entriesByTeam.get(teamId);
+
+          return {
+            teamId,
+            teamName,
+            trade,
+            isLocalLabor: false,
+            headcountPresent: existing?.headcountPresent ?? 0,
+            attendanceStatus: existing?.attendanceStatus ?? AttendanceStatus.ON_TIME,
+            idleReason: existing?.idleReason ?? null,
+            idleReasonNotes: existing?.idleReasonNotes ?? '',
+            taskWorkedOn: existing?.taskWorkedOn ?? '',
+            taskCompleted: existing?.taskCompleted ?? false,
+            photos: existing?.photos ?? [],
+          } as TeamReportEntry;
+        })
+        .filter((e): e is TeamReportEntry => !!e);
+
+      setEntries(nextEntries);
+    } catch {
+      setError('Could not load assigned teams. Check your connection.');
+    } finally {
+      setTeamsLoading(false);
+    }
+  }, [user?.assignedSites, todayISO]);
+
+  React.useEffect(() => {
+    load();
+  }, [load]);
 
   const updateEntry = useCallback(
     (index: number, updates: Partial<TeamReportEntry>) => {
