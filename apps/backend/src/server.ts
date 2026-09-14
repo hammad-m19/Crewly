@@ -20,6 +20,7 @@ import ownerRoutes from './routes/owner';
 import userRoutes from './routes/users';
 import paymentRoutes from './routes/payments';
 import accountantRoutes from './routes/accountant';
+import taskRoutes from './routes/tasks';
 import { moneyFilter } from './middleware/moneyFilter';
 import { authenticate } from './middleware/auth';
 import { initFirebase } from './config/firebase';
@@ -73,6 +74,7 @@ app.use('/api/material-purchases', authenticate, moneyFilter, materialPurchaseRo
 app.use('/api/petty-cash', authenticate, moneyFilter, pettyCashRoutes);
 app.use('/api/sync', authenticate, moneyFilter, syncRoutes);
 app.use('/api/verifications', authenticate, verificationRoutes);
+app.use('/api/tasks', authenticate, taskRoutes);
 app.use('/api/coordination', authenticate, coordinationRoutes);
 app.use('/api/notifications', authenticate, notificationRoutes);
 app.use('/api/owner', authenticate, moneyFilter, ownerRoutes);

@@ -9,3 +9,4 @@ export { MaterialPurchase, IMaterialPurchase } from './MaterialPurchase';
 export { PettyCash, IPettyCash } from './PettyCash';
 export { Payment, IPayment } from './Payment';
 export { Notification, INotification } from './Notification';
+export { Task, ITask } from './Task';
