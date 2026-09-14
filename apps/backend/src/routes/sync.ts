@@ -12,6 +12,7 @@ import { MaterialPurchase } from '../models/MaterialPurchase';
 import { PettyCash } from '../models/PettyCash';
 import { Payment } from '../models/Payment';
 import { Notification } from '../models/Notification';
+import { Task } from '../models/Task';
 import mongoose from 'mongoose';
 
 const router = Router();
@@ -29,6 +30,7 @@ const modelMap: Record<string, mongoose.Model<any>> = {
   [TABLE_NAMES.PETTY_CASH]: PettyCash,
   [TABLE_NAMES.PAYMENTS]: Payment,
   [TABLE_NAMES.NOTIFICATIONS]: Notification,
+  [TABLE_NAMES.TASKS]: Task,
 };
 
 /**
